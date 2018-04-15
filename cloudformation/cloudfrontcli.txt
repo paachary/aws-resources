@@ -1,0 +1,1 @@
+aws cloudformation create-stack --stack-name praxstack2 --template-body file://vpc-ec2-template1.json --parameters file://cfproperties.json 

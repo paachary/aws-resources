@@ -1,0 +1,22 @@
+[
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "EC2SouthKP"
+  }, 
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "t2.micro"
+  }, 
+  {
+    "ParameterKey": "AZ1",
+    "ParameterValue": "ap-south-1a"
+  }, 
+  {
+    "ParameterKey": "AZ2",
+    "ParameterValue": "ap-south-1b"
+  },
+  {
+    "ParameterKey": "SSHLocation",
+    "ParameterValue": "0.0.0.0/0"
+  }
+]
