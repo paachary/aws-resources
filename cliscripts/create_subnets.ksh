@@ -24,7 +24,7 @@ done
 
 echo "End...Creating private subnets"
 
-echo "Start...Creating a public subnet"
+echo "Start...Creating public subnets"
 
 public_subnet_response=`aws ec2 create-subnet --vpc-id ${vpcid} --cidr-block 10.0.5.0/24 --availability-zone ap-south-1b`
 
@@ -40,6 +40,21 @@ aws ec2 modify-subnet-attribute \
 
 echo "Done...Creating a public subnet - ${publicsubnetid}"
 
+public_subnet_response=`aws ec2 create-subnet --vpc-id ${vpcid} --cidr-block 10.0.6.0/24 --availability-zone ap-south-1a`
+
+publicsubnetid1=`echo ${public_subnet_response} | jq '.Subnet.SubnetId' | tr -d '"'`
+aws ec2 create-tags \
+  --resources "${publicsubnetid1}" \
+  --tags "Key"="Name","Value"="PublicSubnet-ap-south-1a" \
+         "Key"="Type","Value"="ShellScript"
+
+aws ec2 modify-subnet-attribute \
+ --subnet-id ${publicsubnetid1} \
+ --map-public-ip-on-launch
+
+echo "Done...Creating a public subnet - ${publicsubnetid1}"
+
 export publicsubnetid
+export publicsubnetid1
 export subnet_response 
 export subnetids

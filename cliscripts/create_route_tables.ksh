@@ -38,9 +38,11 @@ done
 
 echo "Done...Associating private subnets to the private route table"
 
-echo "Start...Associating public subnet to the Public route table"
+echo "Start...Associating public subnets to the Public route table"
 
 assoc_rt_response=`aws ec2 associate-route-table --route-table-id ${Publicroutetableid} --subnet-id ${publicsubnetid}`
+
+assoc_rt_response=`aws ec2 associate-route-table --route-table-id ${Publicroutetableid} --subnet-id ${publicsubnetid1}`
 
 echo "Done...Associating public subnets to the Public route table"
 
