@@ -17,6 +17,10 @@
   },
   {
     "ParameterKey": "SSHLocation",
-    "ParameterValue": "0.0.0.0/0"
+    "ParameterValue": "171.76.0.0/32"
+  },
+  {
+    "ParameterKey": "BucketName",
+    "ParameterValue": "prax-bucket"
   }
 ]

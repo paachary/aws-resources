@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "AWS CloudFormation Sample Template VPC_2_Subnets_3EC2_Instances_One_Each_Subnet with NAT instance",
+  "Description" : "AWS CloudFormation template for creating 3 EC2 instances in a non-default VPC. The template creates one NAT instance, one bastian host (both hosted in a public subnet) and one web server hosted in a private subnet. There are 4 private subnets and 2 public subnets. One of the public subnet is used by a lambda function and others are used by EC2 instances.",
 
   "Parameters" : {
     
@@ -424,7 +424,6 @@
         "DestinationCidrBlock" : "0.0.0.0/0",
         "InstanceId" : { "Ref" : "NATInstanceAZ1" }
       }
-    },
-
+    }
   } 
 }
