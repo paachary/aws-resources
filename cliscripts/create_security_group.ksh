@@ -18,9 +18,9 @@ echo "Done...creating security group - ${security_grp_id}"
 
 echo "Start...associating rules to security group"
 
-#response=`aws ec2 authorize-security-group-ingress \
-#        --group-id ${security_grp_id} \
-#        --protocol tcp --port 22 --cidr 0.0.0.0/0`
+response=`aws ec2 authorize-security-group-ingress \
+        --group-id ${security_grp_id} \
+        --protocol tcp --port 22 --cidr 0.0.0.0/0`
 
 response=`aws ec2 authorize-security-group-ingress \
         --group-id ${security_grp_id} \
