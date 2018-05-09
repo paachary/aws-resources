@@ -33,9 +33,9 @@ The directory contains python scripts using SDK with boto3 to setup and tear-dow
 This directory contains aws cli commands embedded within shell scripts. The scripts are used to create a 
 non-default VPC with multiple private and public subnets, including two EC2 instances along with a NAT instance.
 
-##### Script for creating services: create_aws_services_in_custom_vpc.ksh
+#### Script for creating services: create_aws_services_in_custom_vpc.ksh
 
-##### Script for cleaning up the services: cleanup.ksh
+#### Script for cleaning up the services: cleanup.ksh
 
 ## Following components / services are created:
 
