@@ -37,7 +37,7 @@ non-default VPC with multiple private and public subnets, including two EC2 inst
 
 #### Script for cleaning up the services: cleanup.ksh
 
-## Following components / services are created:
+#### Following components / services are created:
 
           VPC           - Custom VPC
           Internet Gateway
