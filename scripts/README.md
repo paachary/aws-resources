@@ -1,7 +1,7 @@
 # aws-resources
 
 
-The repository contains scripts and templates for various AWS services.
+## The repository contains scripts and templates for various AWS services.
 
 Cloudformation:
                  Inside the templates directory, there are working templates for creating AWS components and services in a 
