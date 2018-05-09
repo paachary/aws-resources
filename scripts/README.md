@@ -3,7 +3,7 @@
 
 ## The repository contains scripts and templates for various AWS services.
 
-###Cloudformation:
+### Cloudformation:
 Inside the templates directory, there are working templates for creating AWS components and services in a non-default VPC. 
 ####  1. AutoScaling_Webapp_Redis_VPC.json :
   This template can be used for creating a sample Flask (Python-3.6) based web application with Redis as the backend database.
