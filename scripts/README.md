@@ -22,3 +22,7 @@ Inside the templates directory, there are working templates for creating AWS com
   This template  can be used for creating 4 EC2 instances in a non-default VPC. 
   The template creates one NAT instance, one bastion host (both hosted in a public subnet) and two web servers hosted in public subnets.
  
+
+### DynamoDB:
+
+The directory contains python scripts using SDK with boto3 to setup and tear-down a set of dynamodb tables.
