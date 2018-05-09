@@ -26,3 +26,32 @@ Inside the templates directory, there are working templates for creating AWS com
 ### DynamoDB:
 
 The directory contains python scripts using SDK with boto3 to setup and tear-down a set of dynamodb tables.
+
+
+### CLI Scripts
+
+This directory contains aws cli commands embedded within shell scripts. The scripts are used to create a 
+non-default VPC with multiple private and public subnets, including two EC2 instances along with a NAT instance.
+
+# Script for creating services: create_aws_services_in_custom_vpc.ksh
+
+# Script for cleaning up the services: cleanup.ksh
+
+## Following components / services are created:
+
+#          VPC           - Custom VPC
+#          Internet Gateway
+#          Subnets       - 4 Private Subnets ( 2 each in 2 Availability Zones
+#                          1 Public Subnet to host one Bastion Server and one NAT Instance
+#          NACL          - The inbound and outbound rules allow basic minimum protocols on the required ports
+#                          HTTP / HTTPS / SSH / iCMP
+#                          All the subnets have been setup on the NACL
+#          Security Group- Security Group has been configured to allow the above basic rules
+#          Route Tables  - Two route tables are created:
+#                           1. To route traffic from / to private subnets. The NAT instance is added to this route table
+#                           2. To route traffic from / to public subnet. The Internet Gateway is added to this route table
+#          EC2 Instances - Two EC2 instances are created by this script
+#                          1. NAT instance on the public subnet
+#                          2. Bastion Server to allow connection to EC2 instances on private subnets
+
+
