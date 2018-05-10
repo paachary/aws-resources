@@ -2,7 +2,7 @@
 
 echo "Start...creating an EC2 instance in the public subnet"
 
-response=`aws ec2 run-instances --image-id ami-7c87d913 --count 1 --instance-type t2.micro --key-name EC2SouthKP --security-group-ids ${security_grp_id} --subnet-id ${publicsubnetid}`
+response=`aws ec2 run-instances --image-id ami-7c87d913 --count 1 --instance-type t2.micro --key-name ${EC2KEYPAIR} --security-group-ids ${security_grp_id} --subnet-id ${publicsubnetid}`
 
 ec2Instanceid=`echo ${response}| jq '.Instances[0].InstanceId' | tr -d '"'`
 

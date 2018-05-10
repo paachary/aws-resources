@@ -31,6 +31,9 @@ cd create-services
 
 echo "Creating AWS services within a custom VPC"
 
+## Set the environment variables
+. ./set_env.ksh
+
 ## Create Custom VPC
 . ./create_vpc.ksh
 

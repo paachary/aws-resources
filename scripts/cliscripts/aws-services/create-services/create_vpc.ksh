@@ -1,9 +1,5 @@
 #!/bin/ksh
 
-export vpcName="Custom VPC"
-export routeTableName="$vpcName RouteTable"
-export igwName="$vpcName IGW"
-
 echo "Creating custom VPC"
 
 echo "Start...Creating a custom VPC"
