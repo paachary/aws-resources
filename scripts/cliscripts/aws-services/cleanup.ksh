@@ -24,6 +24,8 @@
 #          
 ##################################################################################################################
 
+cd delete-services
+
 echo "Starting the cleanup script"
 
 ## Getting the VPC id which is linked to all the related resources

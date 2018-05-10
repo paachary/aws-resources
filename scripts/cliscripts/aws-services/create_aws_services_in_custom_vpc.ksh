@@ -27,6 +27,8 @@
 #          and share for review.
 #          
 ##################################################################################################################
+cd create-services
+
 echo "Creating AWS services within a custom VPC"
 
 ## Create Custom VPC

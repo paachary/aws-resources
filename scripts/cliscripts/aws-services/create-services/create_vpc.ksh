@@ -8,7 +8,7 @@ echo "Creating custom VPC"
 
 echo "Start...Creating a custom VPC"
 
-response=`aws ec2 create-vpc --cli-input-json file://vpc_input.json`
+response=`aws ec2 create-vpc --cli-input-json file://../vpc_input.json`
 
 vpcid=`echo $response | jq '.Vpc.VpcId' | tr -d '"'`
 
