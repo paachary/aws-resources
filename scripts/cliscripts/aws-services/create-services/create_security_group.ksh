@@ -1,5 +1,8 @@
 #!/bin/ksh
 
+## Script for fetching the public ip address and updating the parameter files.
+myipaddress=`curl --no-buffer https://www.iplocation.net/find-ip-address | grep 'IP Address is'| cut -f3 -d">"| cut -f1 -d"<"`
+
 echo "Start...creating security group"
 
 response=`aws ec2 create-security-group \
@@ -20,7 +23,7 @@ echo "Start...associating rules to security group"
 
 response=`aws ec2 authorize-security-group-ingress \
         --group-id ${security_grp_id} \
-        --protocol tcp --port 22 --cidr 0.0.0.0/0`
+        --protocol tcp --port 22 --cidr "${myipaddress}/32`
 
 response=`aws ec2 authorize-security-group-ingress \
         --group-id ${security_grp_id} \
