@@ -1,0 +1,136 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation template for creating 2 SQS queues and 1 SNS topic for supportng a Fanout project. This template exports the queue urls / arns and topic arn to other templates",
+  "Parameters" : {
+      
+    "SNSTopicName" : {
+      "Description" : "Name of SNS Topic",
+      "Default":"FanOutSNSTopic",
+      "Type" : "String"
+    },
+      
+    "Queue1Name" : {
+      "Description" : "Name of 1st SQS Queue",
+      "Default":"FanOutSQSQueue1",
+      "Type" : "String"
+    },
+      
+    "Queue2Name" : {
+      "Description" :"Name of 2nd SQS Queue",
+      "Default":"FanOutSQSQueue2",
+      "Type" : "String"
+    }
+      
+  },
+  "Resources" : {
+    "FanOutSQSQueue1" : {
+        "Type" : "AWS::SQS::Queue",
+        "Properties": {
+            "QueueName" : {"Ref": "Queue1Name"}
+        }
+    },
+    "FanOutSQSQueue2" : {
+        "Type" : "AWS::SQS::Queue",
+        "Properties": {
+            "QueueName" : {"Ref": "Queue2Name"}
+        }
+    },
+    "FanOutSNSTopic" : {
+       "Type" : "AWS::SNS::Topic",
+       "Properties" : {
+          "Subscription" : [
+             { "Endpoint" : { "Fn::GetAtt" : [ "FanOutSQSQueue1" , "Arn" ] }, "Protocol" : "sqs" },
+             { "Endpoint" : { "Fn::GetAtt" : [ "FanOutSQSQueue2", "Arn" ] }, "Protocol" : "sqs" }
+          ],
+          "TopicName" : {"Ref": "SNSTopicName"}
+       }
+    },
+    "FanOutSQSQueue1Policy" :   {
+       "Type" : "AWS::SQS::QueuePolicy",
+       "Properties" : {
+          "PolicyDocument" : {
+              "Version": "2012-10-17",
+              "Id": "FanOutSQSQueue1Policy",
+              "Statement": [
+                {
+                  "Sid": "1",
+                  "Effect": "Allow",
+                  "Principal": {
+                    "AWS": "*"
+                  },
+                  "Action": [ 
+                      "SQS:SendMessage",
+                      "SQS:ReceiveMessage"
+                  ],
+                  "Resource":  { "Fn::GetAtt" : [ "FanOutSQSQueue1" , "Arn" ] },
+                  "Condition": {
+                    "ArnEquals": {
+                      "aws:SourceArn":  { "Ref" : "FanOutSNSTopic" }
+                    }
+                  }
+                }
+              ]
+          },
+          "Queues" : [  {"Ref": "FanOutSQSQueue1"} ]
+       }
+    }, 
+      
+    "FanOutSQSQueue2Policy" :   {
+       "Type" : "AWS::SQS::QueuePolicy",
+       "Properties" : {
+          "PolicyDocument" : {
+              "Version": "2012-10-17",
+              "Id": "FanOutSQSQueue2Policy",
+              "Statement": [
+                {
+                  "Sid": "2",
+                  "Effect": "Allow",
+                  "Principal": {
+                    "AWS": "*"
+                  },
+                  "Action": [ 
+                      "SQS:SendMessage",
+                      "SQS:ReceiveMessage"
+                  ],
+                  "Resource":  { "Fn::GetAtt" : [ "FanOutSQSQueue2", "Arn" ] },
+                  "Condition": {
+                    "ArnEquals": {
+                      "aws:SourceArn":   { "Ref" : "FanOutSNSTopic" }
+                    }
+                  }
+                }
+              ]
+          },
+          "Queues" : [  {"Ref": "FanOutSQSQueue2"} ]
+       }
+    }
+  },
+  "Outputs" : {
+      "FanOutQueue1URL" : {
+          "Description" : "Queue URL for 1st queue",
+          "Value" :  { "Ref": "FanOutSQSQueue1" },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue1URL" } }
+      },
+      "FanOutQueue2URL" : {
+          "Description" : "Queue URL for 2nd queue",
+          "Value" :  { "Ref": "FanOutSQSQueue2" },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue2URL" } }
+      },
+      "FanOutQueue1ARN" : {
+          "Description" : "Queue ARN for 1st queue",
+          "Value" :   { "Fn::GetAtt" : [ "FanOutSQSQueue1" , "Arn" ] },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue1ARN" } }
+      },
+      "FanOutQueue2ARN" : {
+          "Description" : "Queue URL for 2nd queue",
+          "Value" : { "Fn::GetAtt" : [ "FanOutSQSQueue2", "Arn" ] },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue2ARN" } }
+      },
+      "SNSTopic" : {
+          "Description" : "SNS Topic for Fanout project",
+          "Value" :  { "Ref": "FanOutSNSTopic" },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Topic" } }
+      },
+  }
+}

@@ -11,21 +11,6 @@
       "Type" : "String"
     },
 
-    "KeyName": {
-      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
-      "Type": "AWS::EC2::KeyPair::KeyName",
-      "Default":"MyEC2KeyPair",
-      "ConstraintDescription" : "must be the name of an existing EC2 KeyPair."
-    },
-
-    "InstanceType" : {
-      "Description" : "WebServer EC2 instance type",
-      "Type" : "String",
-      "Default" : "t2.micro",
-      "AllowedValues" : [ "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium"],
-      "ConstraintDescription" : "must be a valid EC2 instance type."
-    },
-
     "AZ1" : {
       "Description" : "Availability Zone for launching public WebApp",
       "Type" : "String",
@@ -49,62 +34,6 @@
       "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
       "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
     },
-
-    "DBName": {
-      "Default": "somedb",
-      "Description" : "The database name",
-      "Type": "String",
-      "MinLength": "1",
-      "MaxLength": "8",
-      "ConstraintDescription" : "must begin with a letter and contain only alphanumeric characters."
-    },
- 
-    "DBUsername": {
-      "Default": "someuser",
-      "NoEcho": "true",
-      "Description" : "The database admin account username",
-      "Type": "String",
-      "MinLength": "1",
-      "MaxLength": "16",
-      "ConstraintDescription" : "must begin with a letter and contain only alphanumeric characters."
-    },
- 
-    "DBPassword": {
-      "Default": "somepwd1234",
-      "NoEcho": "true",
-      "Description" : "The database admin account password",
-      "Type": "String",
-      "MinLength": "8"
-    },
- 
-    "DBClass" : {
-      "Default" : "db.t2.micro",
-      "Description" : "Database instance class",
-      "Type" : "String",
-      "AllowedValues" : [ "db.t2.micro", "db.m1.small", "db.m1.large", "db.m1.xlarge", "db.m2.xlarge" ],
-      "ConstraintDescription" : "must select a valid database instance type."
-    },
- 
-    "DBAllocatedStorage" : {
-      "Default": "5",
-      "Description" : "The size of the database (Gb)",
-      "Type": "Number",
-      "MinValue": "5",
-      "MaxValue": "6144",
-      "ConstraintDescription" : "must be between 5+"
-    },
-      
-    "WebServerName1"  :{
-      "Description" : "Name of the 1st WebApp Server to be displayed in the index html",
-      "Type" : "String",
-      "Default" : "WebApp1"
-    },
-      
-    "WebServerName2"  :{
-      "Description" : "Name of the 2nd WebApp Server to be displayed in the index html",
-      "Type" : "String",
-      "Default" : "WebApp2"
-    },
       
     "SubnetSufix"  :{
       "Description" : "Subnet Suffic to be utilized in the code below",
@@ -117,20 +46,7 @@
   {
     "Region2Examples" : {
       "ap-south-1"     : { "Examples" : "https://s3-ap-south-1.amazonaws.com/cloudformation-examples-ap-south-1" }
-    },
-    
-    "AWSInstanceType2Arch" : {
-      "t2.micro"    : { "Arch" : "HVM64"  }
-    },
-    
-    "AWSInstanceType2NATArch" : {
-      "t2.micro"    : { "Arch" : "NATHVM64"  }
-    },
-    
-    "AWSRegionArch2AMI" : {
-      "ap-south-1"       : {"PV64" : "NOT_SUPPORTED", "HVM64" : "ami-531a4c3c", "HVMG2" : "ami-411e492e" , "NATHVM64" : "ami-0b3f4aad2015b0e15"},
-      "us-east-1"        : {"PV64" : "NOT_SUPPORTED","HVM64" : "ami-467ca739", "NATHVM64" : "ami-01623d7b"}
-    },
+    },    
 
     "SubnetConfig" : {
       "VPC"        : { "CIDR" : "0.0/16" },
@@ -146,31 +62,6 @@
   },
 
   "Resources" : {
-
-    "CfnUser" : {
-      "Type" : "AWS::IAM::User",
-      "Properties" : {
-        "Path": "/",
-        "Policies": [{
-          "PolicyName": "root",
-          "PolicyDocument": { "Statement":[{
-            "Effect"   : "Allow",
-            "Action"   : [
-              "cloudformation:DescribeStackResource",
-              "s3:GetObject"
-            ],
-            "Resource" :"*"
-          }]}
-        }]
-      }
-    },
-
-    "CfnKeys" : {
-      "Type" : "AWS::IAM::AccessKey",
-      "Properties" : {
-        "UserName" : {"Ref": "CfnUser"}
-      }
-    },
 
     "cfvpc" : {
      "Type" : "AWS::EC2::VPC",
@@ -551,210 +442,10 @@
          ],
         "Tags"     : [ {"Key" : "Name", "Value" : "WebAppInstanceSecurityGroup" }]
       }
-    },
-      
-    "BastionServer": {
-      "Type": "AWS::EC2::Instance",
-      "DependsOn" : ["AttachGatewaycfvpc"],
-      "Properties": {
-         "InstanceType" : { "Ref" : "InstanceType" },
-         "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
-                    { "Fn::FindInMap" : [ "AWSInstanceType2Arch", 
-                      { "Ref" : "InstanceType" }, "Arch" ] } ] },
-          "KeyName"  : { "Ref" : "KeyName" },
-          "NetworkInterfaces": [ {
-              "DeviceIndex": "0",
-              "GroupSet": [{ "Ref" : "NATInstancSecuirityGroup" }],
-              "SubnetId": { "Ref" : "PublicSubnetEC2cfvpcaz" }
-                 } ],
-          "Tags"     : [ {"Key" : "Name", "Value" : "BastionServer" },
-                        {"Key" : "Environment", "Value" : "Dev"} ]
-       }
-    },
-
-    "WebAppAZ1": {
-       "Type": "AWS::EC2::Instance",
-       "DependsOn" : "AttachGatewaycfvpc",
-       "Metadata" : {
-         "AWS::CloudFormation::Init" : {
-            "configSets" : {
-             "Install_and_Configure" : [ "Install" ]
-             },
-             "Install" : {
-                "packages" : {
-                 "yum" : {
-                    "httpd" : []
-                 }
-                },
-                "files" : {
-                   "/var/www/html/index.html" : {
-                     "content" : { "Fn::Join" : ["", [                        
-                        "<html><h1>Hi there: This is Index page -", { "Ref" : "WebServerName1" },".</h1></html>\n"
-                     ]]
-                     },
-                     "mode" : "000644",
-                     "owner" : "apache",
-                     "group" : "apache"
-                   },
-                   "/var/www/html/health.html" : {
-                     "content" : { "Fn::Join" : ["", [                        
-                        "<html><h1>Hi there: This is health page - ", { "Ref" : "WebServerName1" },". You are alive.</h1></html>\n"
-                     ]]
-                     },
-                     "mode" : "000644",
-                     "owner" : "apache",
-                     "group" : "apache"
-                   }
-                },
-                "services" : {
-                    "sysvinit" : {
-                    "httpd"    : { "enabled" : "true", "ensureRunning" : "true" }
-                    }
-                }
-             }
-         }
-       },
-       "Properties": {
-         "InstanceType" : { "Ref" : "InstanceType" },
-         "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
-                    { "Fn::FindInMap" : [ "AWSInstanceType2Arch", 
-                      { "Ref" : "InstanceType" }, "Arch" ] } ] },
-          "KeyName"  : { "Ref" : "KeyName" },
-          "NetworkInterfaces": [ {
-              "DeviceIndex": "0",
-              "GroupSet": [{ "Ref" : "NATInstancSecuirityGroup" }],
-              "SubnetId": { "Ref" : "PublicSubnetEC2cfvpcaz" }
-                 } ],
-          "Tags"     : [ {"Key" : "Name", "Value" : "WebAppAZ1" },
-                        {"Key" : "Environment", "Value" : "Dev"} ],
-          "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-                    "#!/bin/bash -v\n",
-                    "yum update -y aws-cfn-bootstrap\n",
-                    "/opt/aws/bin/cfn-init -v -s ", { "Ref" : "AWS::StackId" }, " --resource WebAppAZ1 ",
-                    " --configsets Install_and_Configure ",
-                    " --region ", { "Ref" : "AWS::Region" } , "\n",
-                    "# Signal status from cfn-init ",
-                    "/opt/aws/bin/cfn-signal -e $? -s ", { "Ref" : "AWS::StackId" }, " --resource WebAppAZ1 ",
-                    " --region ", { "Ref" : "AWS::Region" }
-                    ]
-                ]
-              }
-          }
-       }
-    },
-    "WebAppAZ2": {
-       "Type": "AWS::EC2::Instance",
-       "DependsOn" : "AttachGatewaycfvpc",
-       "Metadata" : {
-         "AWS::CloudFormation::Init" : {
-            "configSets" : {
-             "Install_and_Configure" : [ "Install" ]
-             },
-             "Install" : {
-                "packages" : {
-                 "yum" : {
-                    "httpd" : []
-                 }
-                },
-                "files" : {
-                   "/var/www/html/index.html" : {
-                     "content" : { "Fn::Join" : ["", [                        
-                        "<html><h1>Hi there: This is Index page - ", { "Ref" : "WebServerName2" },".</h1></html>\n"
-                     ]]
-                     },
-                     "mode" : "000644",
-                     "owner" : "apache",
-                     "group" : "apache"
-                   },
-                   "/var/www/html/health.html" : {
-                     "content" : { "Fn::Join" : ["", [                        
-                        "<html><h1>Hi there: This is health page - ", { "Ref" : "WebServerName2" },". You are alive.</h1></html>\n"
-                     ]]
-                     },
-                     "mode" : "000644",
-                     "owner" : "apache",
-                     "group" : "apache"
-                   }
-                },
-                "services" : {
-                    "sysvinit" : {
-                    "httpd"    : { "enabled" : "true", "ensureRunning" : "true" }
-                    }
-                }
-             }
-         }
-       },
-       "Properties": {
-         "InstanceType" : { "Ref" : "InstanceType" },
-         "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
-                    { "Fn::FindInMap" : [ "AWSInstanceType2Arch", 
-                      { "Ref" : "InstanceType" }, "Arch" ] } ] },
-          "KeyName"  : { "Ref" : "KeyName" },
-          "NetworkInterfaces": [ {
-              "DeviceIndex": "0",
-              "GroupSet": [{ "Ref" : "NATInstancSecuirityGroup" }],
-              "SubnetId": { "Ref" : "PublicSubnetEC2cfvpcaz1" }
-                 } ],
-          "Tags"     : [ {"Key" : "Name", "Value" : "WebAppAZ2" },
-                        {"Key" : "Environment", "Value" : "Dev"} ],
-          "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-                    "#!/bin/bash -v\n",
-                    "yum update -y aws-cfn-bootstrap\n",
-                    "/opt/aws/bin/cfn-init -v -s ", { "Ref" : "AWS::StackId" }, " --resource WebAppAZ2 ",
-                    " --configsets Install_and_Configure ",
-                    " --region ", { "Ref" : "AWS::Region" } , "\n",
-                    "# Signal status from cfn-init ",
-                    "/opt/aws/bin/cfn-signal -e $? -s ", { "Ref" : "AWS::StackId" }, " --resource WebAppAZ2 ",
-                    " --region ", { "Ref" : "AWS::Region" }
-                    ]
-                ]
-              }
-          }
-       }
-    },      
-
-    "NATInstanceAZ1": {
-       "Type": "AWS::EC2::Instance",
-        "DependsOn" : "AttachGatewaycfvpc",
-        "Properties": {
-          "InstanceType" : { "Ref" : "InstanceType" },
-          "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
-                     { "Fn::FindInMap" : [ "AWSInstanceType2NATArch", 
-                       { "Ref" : "InstanceType" }, "Arch" ] } ] },
-           "KeyName"  : { "Ref" : "KeyName" },
-           "SourceDestCheck" : "false",
-           "NetworkInterfaces": [ {
-               "DeviceIndex": "0",
-               "GroupSet": [{ "Ref" : "NATInstancSecuirityGroup" }],
-               "SubnetId": { "Ref" : "PublicSubnetEC2cfvpcaz" }
-                  } ],
-           "Tags"     : [ {"Key" : "Name", "Value" : "NATInstanceAZ1" } ]
-         }
-    },
-
-    "PublicRouteNAT" : {
-       "Type" : "AWS::EC2::Route",
-       "Properties" : {
-         "RouteTableId" : { "Ref" : "NATRTcfvpc" },
-         "DestinationCidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]},
-         "InstanceId" : { "Ref" : "NATInstanceAZ1" }
-       }
     }
   },
 
   "Outputs" : {
-    "NATInstanceAZ1" : {
-       "Description": "The NAT Instance ID",  
-       "Value" : { "Fn::GetAtt" : [ "NATInstanceAZ1", "PublicDnsName" ]}
-    },
-    "Webapp1InstanceID" : {
-       "Description": "The WebAppAZ1 ID",  
-       "Value" :{ "Fn::GetAtt" : [ "WebAppAZ1", "PublicDnsName" ]}
-    },
-    "Webapp2InstanceID" : {
-       "Description": "The WebAppAZ2 ID",  
-       "Value" :{ "Fn::GetAtt" : [ "WebAppAZ2", "PublicDnsName" ]}
-    },
     "PublicSubnet1" : {
         "Description":"Public Subnet1 used for public webservers",
         "Value":{ "Ref": "PublicSubnetEC2cfvpcaz" },
