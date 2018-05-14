@@ -1,0 +1,116 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation template for creating Lambda function for publishing the data from S3 bucket to SNS Topic. This relies on subnets_vpc_creation_template and sqs_sns_role_n_policy_template templates. Hence, stacks from these templates need to be created before a stack from this template is created.",
+
+  "Parameters" : {
+
+    "BucketName" : {
+      "Description" : "Name of bucket containing source files",
+      "Default":"prax-bucket",
+      "Type" : "String"
+    },
+
+    "NetworkStackName" : {
+        "Description" : "Stack Name which was used to vpc and subnets",
+        "Type": "String",
+        "MinLength" : 1,
+        "MaxLength" : 255,
+        "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+        "Default" : "NetworkStack"
+    },
+      
+    "SNSSQSRoleStack" : {
+        "Description" : "Stack Name which was used to required roles and policies for fanout project",
+        "Type": "String",
+        "MinLength" : 1,
+        "MaxLength" : 255,
+        "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+        "Default" : "IAMRoleStack"
+    },
+
+    "LambdaFunctionName" : {
+      "Description" : "Name of 1st SQS Queue",
+      "Default": "fanOutLambdaFunction",
+      "Type" : "String"
+    }
+  },
+  "Resources" : {
+      "LambdaFunction" : {
+        "Type": "AWS::Lambda::Function",
+        "Properties": {
+            "FunctionName" : { "Ref" : "LambdaFunctionName" },
+            "Description" : "Lambda function to trigger subscription to topic when a security file arrives in an S3 bucket.",
+            "Handler": "pulish_to_topic.handler",
+            "Role": { "Fn::ImportValue" : {"Fn::Sub": "${SNSSQSRoleStack}-LambdaRole" } } ,
+            "Code": {
+                "S3Bucket": {"Ref" : "BucketName"},
+                "S3Key": "sns_topic_publisher_lambda.zip"
+            },
+            "Runtime": "python3.6",
+            "Timeout": "3",
+            "TracingConfig": {
+                "Mode": "Active"
+            },
+            "VpcConfig" : {
+                "SecurityGroupIds" : [  { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-WebServerPubSecurityGroup" } }  ],
+                "SubnetIds" : [ { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID1" } } ,
+                                { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID2" } } ,
+                                { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID3" } } ,
+                                { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID4" } } 
+                ]
+            }
+        }
+      },
+      "BucketPermission" : {
+        "Type": "AWS::Lambda::Permission",
+        "Properties": {
+            "Action": "lambda:InvokeFunction",
+            "FunctionName": {"Ref": "LambdaFunction"},
+            "Principal": "s3.amazonaws.com",
+            "SourceAccount": {"Ref": "AWS::AccountId"},
+            "SourceArn": {
+                "Fn::GetAtt": [ { "Ref" : "BucketName" }, "Arn" ] 
+            }
+        }
+      },
+      
+      "S3BucketNotification":{
+        "Type": "AWS::S3::Bucket",
+        "Properties" : {
+          "BucketName" : { "Ref" : "BucketName" },
+          "NotificationConfiguration": {
+            "LambdaConfigurations": [ {
+                "Event" : "s3:ObjectCreated:Put",
+                 "Function" : { "Fn::GetAtt" : [ { "Ref" : "LambdaFunction" }, "Arn"] },
+                 "Filter" : {
+                   "S3Key" : {
+                     "Rules" : [
+                       {
+                        "Name" : "suffix",
+                        "Value" : "csv"
+                       }
+                     ]
+                   }
+                 }
+               } 
+            ]
+          }
+        }
+      }
+  },
+
+  "Outputs" : {
+      "EC2FanOutRoleARN" : {
+          "Description" : "ARN for EC2 Fanout role",
+          "Value" :  { "Ref": "EC2FanOutRole" },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-EC2Role" } }
+      },
+
+      "LambdaFanOutRoleARN" : {
+          "Description" : "ARN for Lambda Fanout role",
+          "Value" :  { "Ref": "LambdaFanOutRole" },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-LambdaRole" } }
+      }
+  }
+}

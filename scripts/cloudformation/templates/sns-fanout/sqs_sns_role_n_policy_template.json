@@ -132,7 +132,7 @@
                             "dynamodb:UpdateItem"
                         ],
                         "Resource": [
-                           "arn:aws:dynamodb:ap-south-1:973265861767:table/SECURITY_INFO",
+                            { "Fn::ImportValue" : {"Fn::Sub": "${SNSSQSStackName}-DynamoDBTableARNName" } },
                            "arn:aws:dynamodb:*:*:table/*/index/*"
                         ]
                     }

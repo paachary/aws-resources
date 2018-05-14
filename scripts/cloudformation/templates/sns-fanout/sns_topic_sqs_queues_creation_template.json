@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "AWS CloudFormation template for creating 2 SQS queues and 1 SNS topic for supportng a Fanout project. This template exports the queue urls / arns and topic arn to other templates",
+  "Description" : "AWS CloudFormation template for creating 2 SQS queues, 1 SNS topic and 1 dynamodb table for supportng a Fanout project. This template exports the queue urls / arns and topic arn to other templates",
   "Parameters" : {
       
     "SNSTopicName" : {
@@ -19,6 +19,12 @@
     "Queue2Name" : {
       "Description" :"Name of 2nd SQS Queue",
       "Default":"FanOutSQSQueue2",
+      "Type" : "String"
+    },
+      
+    "DynamoDBTable" : {
+      "Description" :"Name of dynamodb table for storing tick information for securities",
+      "Default":"security_info",
       "Type" : "String"
     }
       
@@ -104,6 +110,29 @@
           },
           "Queues" : [  {"Ref": "FanOutSQSQueue2"} ]
        }
+    }, 
+      
+    "SecurityInfoDynamoDBTable" :   {
+       "Type" : "AWS::DynamoDB::Table",
+       "Properties" : {
+          "AttributeDefinitions" : [
+              {
+                  "AttributeName" : "Id",
+                  "AttributeType" : "S"
+              }
+          ],
+          "KeySchema" : [
+            {
+                "AttributeName" : "Id",
+                "KeyType" : "HASH"
+            }
+          ],
+          "ProvisionedThroughput" : {
+            "ReadCapacityUnits" : "5",
+            "WriteCapacityUnits" : "5"
+          },
+          "TableName" : { "Ref" : "DynamoDBTable" },
+       }
     }
   },
   "Outputs" : {
@@ -112,15 +141,25 @@
           "Value" :  { "Ref": "FanOutSQSQueue1" },
           "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue1URL" } }
       },
+      "FanOutQueue1ARN" : {
+          "Description" : "Queue ARN for 1st queue",
+          "Value" :   { "Fn::GetAtt" : [ "FanOutSQSQueue1" , "Arn" ] },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue1ARN" } }
+      },
+      "Queue1NameOut" : {
+          "Description" : "Queue1 Name for Fanout project",
+          "Value" :  { "Ref": "Queue1Name" },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue1Name" } }
+      },
       "FanOutQueue2URL" : {
           "Description" : "Queue URL for 2nd queue",
           "Value" :  { "Ref": "FanOutSQSQueue2" },
           "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue2URL" } }
       },
-      "FanOutQueue1ARN" : {
-          "Description" : "Queue ARN for 1st queue",
-          "Value" :   { "Fn::GetAtt" : [ "FanOutSQSQueue1" , "Arn" ] },
-          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue1ARN" } }
+      "Queue2NameOut" : {
+          "Description" : "Queue2 Name for Fanout project",
+          "Value" :  { "Ref": "Queue2Name" },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Queue2Name" } }
       },
       "FanOutQueue2ARN" : {
           "Description" : "Queue URL for 2nd queue",
@@ -132,5 +171,20 @@
           "Value" :  { "Ref": "FanOutSNSTopic" },
           "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-Topic" } }
       },
+      "SNSTopicNameOutput" : {
+          "Description" : "SNS Topic Name for Fanout project",
+          "Value" :  { "Ref": "SNSTopicName" },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-TopicName" } }
+      },
+      "DynamoDBTableName" : {
+          "Description" : "DynamoDB Table Name",
+          "Value" : { "Fn::GetAtt" : [ "SecurityInfoDynamoDBTable", "Arn" ] },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-TableName" } }
+      },
+      "DynamoDBTableARNName" : {
+          "Description" : "DynamoDB Table Name",
+          "Value" : { "Fn::GetAtt" : [ "SecurityInfoDynamoDBTable", "Arn" ] },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-TableArn" } }
+      }
   }
 }
