@@ -33,4 +33,8 @@ response=`aws ec2 authorize-security-group-ingress \
         --group-id ${security_grp_id} \
         --protocol tcp --port 443 --cidr 0.0.0.0/0`
 
+response=`aws ec2 authorize-security-group-ingress \
+        --group-id ${security_grp_id} \
+        --protocol tcp --port 22 --source-group ${security_grp_id}`
+
 export security_grp_id
