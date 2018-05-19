@@ -1,3 +1,11 @@
+##########################################################################
+## An AWS Cloudformation template for creating                           #
+##      * a non-default VPC                                              #
+##      * public and private subnets                                     #
+##      * Security Groups for public and private web servers             #
+## Author - Prashant Acharya                                             #
+## Default Stack Name = NetworkStack                                     #
+##########################################################################
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
@@ -477,12 +485,12 @@
         "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-PrivateSubnetID4" }}
     },
     "WebServerPvtSecurityGroup" : {
-        "Description":"Private Subnet4 used for private webservers",
+        "Description":"Private Security Group",
         "Value":{ "Ref": "WebAppInstanceSecurityGroup" },
         "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-WebServerPvtSecurityGroupID" }}
     },
     "WebServerPubSecurityGroup" : {
-        "Description":"Private Subnet4 used for public webservers",
+        "Description":"Public Security Group",
         "Value":{ "Ref": "NATInstancSecuirityGroup" },
         "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-WebServerPubSecurityGroupID" }}
     }

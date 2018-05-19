@@ -36,8 +36,20 @@ vpcid=`aws ec2 describe-vpcs --filters Name=tag:Type,Values=ShellScript | jq '.V
 
 echo "Done...Getting the VPC ID for Type = ShellScript tag:: VPCID = ${vpcid}"
 
+## Remove Autoscaling launch config and group
+./delete_autoscaling.ksh
+
+## Removing instance policy
+./delete_instance_profile.ksh
+
+## Deleting the application load balancer
+./delete_app_load_balancer.ksh
+
 ## Deleting the EC2 instances
 ./delete_instance.ksh
+
+## Deleting the target groups
+./delete_target_group.ksh
 
 ## Deleting subnets
 ./delete_subnet.ksh

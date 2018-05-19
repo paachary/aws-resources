@@ -1,3 +1,9 @@
+##########################################################################
+## An AWS Cloudformation template for creating                           #
+##      * a Lambda function                                              #
+## Author - Prashant Acharya                                             #
+## Default Stack Name = NetworkStack                                     #
+##########################################################################
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
@@ -53,7 +59,7 @@
                 "Mode": "Active"
             },
             "VpcConfig" : {
-                "SecurityGroupIds" : [  { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-WebServerPubSecurityGroup" } }  ],
+                "SecurityGroupIds" : [  { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-WebServerPubSecurityGroupID" } }  ],
                 "SubnetIds" : [ { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID1" } } ,
                                 { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID2" } } ,
                                 { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID3" } } ,

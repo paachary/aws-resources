@@ -1,0 +1,230 @@
+##########################################################################
+## An AWS Cloudformation template for creating                           #
+##      * two public web servers                                         #
+## Dependent Stack - NetworkStack                                        #
+## Author - Prashant Acharya                                             #
+##                                                                       #
+##########################################################################
+
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "",
+
+  "Parameters" : {
+
+    "NetworkStackName" : {
+        "Description" : "Stack Name which was used to vpc and subnets",
+        "Type": "String",
+        "MinLength" : 1,
+        "MaxLength" : 255,
+        "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+        "Default" : "NetworkStack"
+    },
+      
+
+    "InstanceType" : {
+      "Description" : "WebServer EC2 instance type",
+      "Type" : "String",
+      "Default" : "t2.micro",
+      "AllowedValues" : [ "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+      
+    "KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Default":"MyEC2KeyPair",
+      "ConstraintDescription" : "must be the name of an existing EC2 KeyPair."
+    },
+
+    "WebServerName1"  :{
+      "Description" : "Name of the 1st WebApp Server to be displayed in the index html",
+      "Type" : "String",
+      "Default" : "WebApp1"
+    },
+      
+    "WebServerName2"  :{
+      "Description" : "Name of the 2nd WebApp Server to be displayed in the index html",
+      "Type" : "String",
+      "Default" : "WebApp2"
+    }
+  },
+
+  "Mappings" : 
+  {
+    "Region2Examples" : {
+      "ap-south-1"     : { "Examples" : "https://s3-ap-south-1.amazonaws.com/cloudformation-examples-ap-south-1" }
+    },
+    
+    "AWSInstanceType2Arch" : {
+      "t2.micro"    : { "Arch" : "HVM64"  }
+    },
+    
+    "AWSInstanceType2NATArch" : {
+      "t2.micro"    : { "Arch" : "NATHVM64"  }
+    },
+    
+    "AWSRegionArch2AMI" : {
+      "ap-south-1"       : {"PV64" : "NOT_SUPPORTED", "HVM64" : "ami-531a4c3c", "HVMG2" : "ami-411e492e" , "NATHVM64" : "ami-0b3f4aad2015b0e15"},
+      "us-east-1"        : {"PV64" : "NOT_SUPPORTED","HVM64" : "ami-467ca739", "NATHVM64" : "ami-01623d7b"}
+    },
+
+    "SubnetConfig" : {
+      "Public"     :{ "CIDR" : "0.0.0.0/0" }
+    }
+  },
+
+  "Resources" : {
+
+    "WebAppAZ1": {
+       "Type": "AWS::EC2::Instance",
+       "Metadata" : {
+         "AWS::CloudFormation::Init" : {
+            "configSets" : {
+             "Install_and_Configure" : [ "Install" ]
+             },
+             "Install" : {
+                "packages" : {
+                 "yum" : {
+                    "httpd" : []
+                 }
+                },
+                "files" : {
+                   "/var/www/html/index.html" : {
+                     "content" : { "Fn::Join" : ["", [                        
+                        "<html><h1>Hi there: This is Index page -", { "Ref" : "WebServerName1" },".</h1></html>\n"
+                     ]]
+                     },
+                     "mode" : "000644",
+                     "owner" : "apache",
+                     "group" : "apache"
+                   },
+                   "/var/www/html/health.html" : {
+                     "content" : { "Fn::Join" : ["", [                        
+                        "<html><h1>Hi there: This is health page - ", { "Ref" : "WebServerName1" },". You are alive.</h1></html>\n"
+                     ]]
+                     },
+                     "mode" : "000644",
+                     "owner" : "apache",
+                     "group" : "apache"
+                   }
+                },
+                "services" : {
+                    "sysvinit" : {
+                    "httpd"    : { "enabled" : "true", "ensureRunning" : "true" }
+                    }
+                }
+             }
+         }
+       },
+       "Properties": {
+         "InstanceType" : { "Ref" : "InstanceType" },
+         "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+                    { "Fn::FindInMap" : [ "AWSInstanceType2Arch", 
+                      { "Ref" : "InstanceType" }, "Arch" ] } ] },
+          "KeyName"  : { "Ref" : "KeyName" },
+          "NetworkInterfaces": [ {
+              "DeviceIndex": "0",
+              "GroupSet": [ { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-WebServerPubSecurityGroupID" } } ],
+              "SubnetId":  { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PublicSubnetID2" } }
+                 } ],
+          "Tags"     : [ {"Key" : "Name", "Value" : "WebAppAZ1" },
+                        {"Key" : "Environment", "Value" : "Dev"} ],
+          "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash -v\n",
+                    "yum update -y aws-cfn-bootstrap\n",
+                    "/opt/aws/bin/cfn-init -v -s ", { "Ref" : "AWS::StackId" }, " --resource WebAppAZ1 ",
+                    " --configsets Install_and_Configure ",
+                    " --region ", { "Ref" : "AWS::Region" } , "\n",
+                    "# Signal status from cfn-init ",
+                    "/opt/aws/bin/cfn-signal -e $? -s ", { "Ref" : "AWS::StackId" }, " --resource WebAppAZ1 ",
+                    " --region ", { "Ref" : "AWS::Region" }
+                    ]
+                ]
+              }
+          }
+       }
+    },
+    "WebAppAZ2": {
+       "Type": "AWS::EC2::Instance",
+       "Metadata" : {
+         "AWS::CloudFormation::Init" : {
+            "configSets" : {
+             "Install_and_Configure" : [ "Install" ]
+             },
+             "Install" : {
+                "packages" : {
+                 "yum" : {
+                    "httpd" : []
+                 }
+                },
+                "files" : {
+                   "/var/www/html/index.html" : {
+                     "content" : { "Fn::Join" : ["", [                        
+                        "<html><h1>Hi there: This is Index page - ", { "Ref" : "WebServerName2" },".</h1></html>\n"
+                     ]]
+                     },
+                     "mode" : "000644",
+                     "owner" : "apache",
+                     "group" : "apache"
+                   },
+                   "/var/www/html/health.html" : {
+                     "content" : { "Fn::Join" : ["", [                        
+                        "<html><h1>Hi there: This is health page - ", { "Ref" : "WebServerName2" },". You are alive.</h1></html>\n"
+                     ]]
+                     },
+                     "mode" : "000644",
+                     "owner" : "apache",
+                     "group" : "apache"
+                   }
+                },
+                "services" : {
+                    "sysvinit" : {
+                    "httpd"    : { "enabled" : "true", "ensureRunning" : "true" }
+                    }
+                }
+             }
+         }
+       },
+       "Properties": {
+         "InstanceType" : { "Ref" : "InstanceType" },
+         "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+                    { "Fn::FindInMap" : [ "AWSInstanceType2Arch", 
+                      { "Ref" : "InstanceType" }, "Arch" ] } ] },
+          "KeyName"  : { "Ref" : "KeyName" },
+          "NetworkInterfaces": [ {
+              "DeviceIndex": "0",
+              "GroupSet": [ { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-WebServerPubSecurityGroupID" } } ],
+              "SubnetId":  { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PublicSubnetID1" } }
+                 } ],
+          "Tags"     : [ {"Key" : "Name", "Value" : "WebAppAZ2" },
+                        {"Key" : "Environment", "Value" : "Dev"} ],
+          "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash -v\n",
+                    "yum update -y aws-cfn-bootstrap\n",
+                    "/opt/aws/bin/cfn-init -v -s ", { "Ref" : "AWS::StackId" }, " --resource WebAppAZ2 ",
+                    " --configsets Install_and_Configure ",
+                    " --region ", { "Ref" : "AWS::Region" } , "\n",
+                    "# Signal status from cfn-init ",
+                    "/opt/aws/bin/cfn-signal -e $? -s ", { "Ref" : "AWS::StackId" }, " --resource WebAppAZ2 ",
+                    " --region ", { "Ref" : "AWS::Region" }
+                    ]
+                ]
+              }
+          }
+       }
+    }
+  },
+
+  "Outputs" : {
+    "Webapp1InstanceID" : {
+       "Description": "The WebAppAZ1 ID",  
+       "Value" :{ "Fn::GetAtt" : [ "WebAppAZ1", "PublicDnsName" ]}
+    },
+    "Webapp2InstanceID" : {
+       "Description": "The WebAppAZ2 ID",  
+       "Value" :{ "Fn::GetAtt" : [ "WebAppAZ2", "PublicDnsName" ]}
+    }
+  }
+}

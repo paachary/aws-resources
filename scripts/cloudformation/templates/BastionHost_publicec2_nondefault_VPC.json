@@ -1,3 +1,9 @@
+##########################################################################
+## An AWS Cloudformation template for creating                           #
+##      * #
+## Author - Prashant Acharya                                             #
+## Default Stack Name = NetworkStack                                     #
+##########################################################################
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 

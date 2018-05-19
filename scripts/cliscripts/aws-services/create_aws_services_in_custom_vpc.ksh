@@ -27,6 +27,15 @@
 #          and share for review.
 #          
 ##################################################################################################################
+
+if [ -z "$1" ]
+then
+    ec2="true"
+else
+    ec2="false"
+
+fi
+
 cd create-services
 
 echo "Creating AWS services within a custom VPC"
@@ -55,11 +64,30 @@ echo "Creating AWS services within a custom VPC"
 ## Create Security Groups
 . ./create_security_group.ksh
 
+## Create NAT instance
+. ./create_nat_instance.ksh
+
 ## Create EC2 Instances
 . ./create_ec2_instances.ksh
 
 ## Create gateways to route table associations
 . ./create_gateways_to_route_tables.ksh
 
+
+if [[ ${ec2} == "false" ]]
+then
+    ## Creating instance profile associated to the autoscaling launch configuration
+    . ./create_instance_profile.ksh
+
+    ## Create autoscaling group
+    . ./create_target_group.ksh
+    . ./create_app_load_balancer.ksh
+    . ./create_auto_scaling_group.ksh
+fi
+
+echo "Waiting for instances to become available..."                                                                                       
+sleep 90
+
+echo "Instances are now available.."
 
 echo "Done with creation of AWS services within a custom VPC: ${vpcid}"
