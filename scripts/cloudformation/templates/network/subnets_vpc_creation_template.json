@@ -9,10 +9,16 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "AWS CloudFormation template creates the network services and components required to support other services. It creates 4 private subnets, 2 public subnets and one public & one private security groups in a non-default VPC.",
+  "Description" : "AWS CloudFormation template for creating network services and components required by other AWS services. The following components get created: 1 non-default VPC, 4 private subnets, 2 public subnets, 1 public security group and 1 private security group.  ",
 
   "Parameters" : {
       
+    "BucketName" : {
+      "Description" : "Name of bucket containing source files",
+      "Default":"prax-bucket",
+      "Type" : "String"
+    },
+
     "AZ1" : {
       "Description" : "Availability Zone for launching public WebApp",
       "Type" : "String",
