@@ -1,0 +1,79 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+    "Resources" : {
+        "NetworkStack" : {
+	       "Type" : "AWS::CloudFormation::Stack",
+	       "Properties" : {
+	          "TemplateURL" : "https://s3.ap-south-1.amazonaws.com/prax-bucket/cloudformation-templates/subnets_vpc_creation_template.json",
+              "TimeoutInMinutes" : "60"
+	       }
+        },
+        "BastionHost": {
+            "Type" : "AWS::CloudFormation::Stack",
+            "DependsOn": ["NetworkStack"],
+            "Properties" : {
+              "Parameters": {
+                     "NetworkStackName" :  { "Fn::GetAtt" : [ "NetworkStack", "Outputs.NetworkStackname" ] },
+                     "PublicSecGroupId" :  { "Fn::GetAtt" : [ "NetworkStack", "Outputs.WebServerPubSecurityGroup" ] },
+                     "PublicSubnetId"   :  { "Fn::GetAtt" : [ "NetworkStack", "Outputs.PublicSubnet2" ] },
+                     "KeyName"          : "EC2SouthKP",
+                     "WebServerName"    : "BastionHost",
+                     "InternetFacing"   : "public"
+               },
+              "TemplateURL" : "https://s3.ap-south-1.amazonaws.com/prax-bucket/cloudformation-templates/ec2-template.json",
+              "TimeoutInMinutes" : "60"
+            }
+        },
+        "NatInstance": {
+            "Type" : "AWS::CloudFormation::Stack",
+            "DependsOn": ["NetworkStack"],
+            "Properties" : {
+              "Parameters": {
+                     "NetworkStackName" :  { "Fn::GetAtt" : [ "NetworkStack", "Outputs.NetworkStackname" ] },
+                     "PublicSecGroupId" :  { "Fn::GetAtt" : [ "NetworkStack", "Outputs.WebServerPubSecurityGroup" ] },
+                     "PublicSubnetId"   :  { "Fn::GetAtt" : [ "NetworkStack", "Outputs.PublicSubnet1" ] },
+                     "NATRouteTable"    :  {"Fn::GetAtt" : [ "NetworkStack", "Outputs.NATRouteTable" ] },
+                     "KeyName"          : "EC2SouthKP",
+                     "WebServerName"    : "Nat-Instance",
+                     "InstanceType"     : "nat",
+                     "InternetFacing"   : "public"
+               },
+              "TemplateURL" : "https://s3.ap-south-1.amazonaws.com/prax-bucket/cloudformation-templates/ec2-template.json",
+              "TimeoutInMinutes" : "60"
+            }
+        },
+        "WebServer1": {
+            "Type" : "AWS::CloudFormation::Stack",
+            "DependsOn": ["NetworkStack"],
+            "Properties" : {
+              "Parameters": {
+                     "NetworkStackName" :  { "Fn::GetAtt" : [ "NetworkStack", "Outputs.NetworkStackname" ] },
+                     "PrivateSecGroupId" : { "Fn::GetAtt" : [ "NetworkStack", "Outputs.WebServerPvtSecurityGroup" ] },
+                     "PrivateSubnetId"   : { "Fn::GetAtt" : [ "NetworkStack", "Outputs.PrivateSubnet1" ] },
+                     "KeyName"          : "EC2SouthKP",
+                     "WebServerName"    : "WebServer1"
+               },
+              "TemplateURL" : "https://s3.ap-south-1.amazonaws.com/prax-bucket/cloudformation-templates/ec2-template.json",
+              "TimeoutInMinutes" : "60"
+            }
+        },
+        "WebServer2": {
+            "Type" : "AWS::CloudFormation::Stack",
+            "DependsOn": ["NetworkStack"],
+            "Properties" : {
+              "Parameters": {
+                     "NetworkStackName" :  { "Fn::GetAtt" : [ "NetworkStack", "Outputs.NetworkStackname" ] },
+                     "PrivateSecGroupId" : { "Fn::GetAtt" : [ "NetworkStack", "Outputs.WebServerPvtSecurityGroup" ] },
+                     "PrivateSubnetId"   : { "Fn::GetAtt" : [ "NetworkStack", "Outputs.PrivateSubnet2" ] },
+                     "KeyName"          : "EC2SouthKP",
+                     "WebServerName"    : "WebServer2"
+               },
+              "TemplateURL" : "https://s3.ap-south-1.amazonaws.com/prax-bucket/cloudformation-templates/ec2-template.json",
+              "TimeoutInMinutes" : "60"
+            }
+        }
+    },
+    "Outputs": {
+       "StackRef": {"Value": { "Ref" : "NetworkStack"}}
+    }
+}

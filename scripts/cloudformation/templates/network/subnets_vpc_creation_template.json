@@ -9,16 +9,10 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "AWS CloudFormation template for creating 4 EC2 instances in a non-default VPC. The template creates one NAT instance, one bastion host (both hosted in a public subnet) and two web servers hosted in public subnets. There are 4 private subnets and 2 public subnets.",
+  "Description" : "AWS CloudFormation template creates the network services and components required to support other services. It creates 4 private subnets, 2 public subnets and one public & one private security groups in a non-default VPC.",
 
   "Parameters" : {
       
-    "BucketName" : {
-      "Description" : "Name of bucket containing source files",
-      "Default":"prax-bucket",
-      "Type" : "String"
-    },
-
     "AZ1" : {
       "Description" : "Availability Zone for launching public WebApp",
       "Type" : "String",
@@ -454,6 +448,9 @@
   },
 
   "Outputs" : {
+    "NetworkStackname" : {
+        "Value": "${AWS::StackName}" 
+    },
     "PublicSubnet1" : {
         "Description":"Public Subnet1 used for public webservers",
         "Value":{ "Ref": "PublicSubnetEC2cfvpcaz" },
@@ -493,6 +490,12 @@
         "Description":"Public Security Group",
         "Value":{ "Ref": "NATInstancSecuirityGroup" },
         "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-WebServerPubSecurityGroupID" }}
+    },
+    "NATRouteTable" : {
+        "Description":"Public Security Group",
+        "Value":{"Ref":"NATRTcfvpc"},
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-NATRouteTable" }}
     }
+      
   }
 }
