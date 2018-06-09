@@ -102,7 +102,7 @@
         "Properties": {
             "FunctionName" : { "Ref" : "LambdaFunctionName" },
             "Description" : "Lambda function to trigger subscription to topic when a security file arrives in an S3 bucket.",
-            "Handler": "pulish_to_topic.handler",
+            "Handler": "publish_to_topic.handler",
             "Role": { "Fn::If" : 
                         [ "IsNestedStack" ,
                             { "Fn::ImportValue" : {"Fn::Sub": "${SNSSQSRoleStackName}-LambdaRole" } },
