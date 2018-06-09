@@ -1,0 +1,26 @@
+[
+  {
+    "ParameterKey": "KeyName",
+    "ParameterValue": "USEastKP"
+  },  
+  {
+    "ParameterKey": "AZ1",
+    "ParameterValue": "us-east-1a"
+  },  
+  {
+    "ParameterKey": "AZ2",
+    "ParameterValue": "us-east-1b"
+  },
+  {
+    "ParameterKey": "BucketName",
+    "ParameterValue": "prax-bucket-us"
+  },
+  {
+    "ParameterKey": "NewBucketName",
+    "ParameterValue": "prax-bucket-us-new"
+  },
+  {
+    "ParameterKey": "SubnetSufix",
+    "ParameterValue": "178.25"
+  }
+]
