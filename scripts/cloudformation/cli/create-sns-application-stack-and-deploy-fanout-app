@@ -12,5 +12,5 @@ status=$?
 
 if [ ${status} = 0 ]
 then
-    /home/prashant/aws-resources/scripts/cloudformation/templates/sns-fanout/scripts/codedpeloycreate.sh
+    /home/prashant/aws-resources/scripts/sqs-sns/code-deploy-using-github/code-deploy-github.ksh
 fi
