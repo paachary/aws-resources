@@ -4,7 +4,7 @@
 
 create-update-stack \
 -s parent-sns-stack \
--t /home/prashant/aws-resources/scripts/cloudformation/templates/sns-project-parent-template.json \
+-t /home/prashant/aws-resources/scripts/cloudformation/templates/nested-templates/sns-project-parent-template.json \
 -p /home/prashant/aws-resources/scripts/cloudformation/parameterfile/snsprojectprops.json \
 -u /home/prashant/aws-resources/scripts/cloudformation/parameterfile/updatesnsprojectprops.json
 
