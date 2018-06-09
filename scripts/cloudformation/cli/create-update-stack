@@ -1,0 +1,154 @@
+#!/bin/bash
+
+## Script for invoking the create and update cloudformation stack based on the parameters / arguments 
+## passed to the script
+## Author : Prashant Acharya
+## Usage:
+## create-update-stack [options]
+## options:
+##  -s --stack-name        : stack name of the stack being created. [required]
+##  -t --template-file     : template body on which the stack is being based on. [required]
+##  -p --parameter-file    : parameter file on which the template-file is based on. [required]
+##  -u --update_param_file : if the stack needs to be updated with the same template,  the parameter file for that template. [optional]
+##  -h --help
+
+usage()
+{
+    echo "usage: create-update-stack [options]
+                options:
+                    -s --stack-name        : stack name of the stack being created. [required]
+                    -t --template-file     : template body on which the stack is being based on. [required]
+                    -p --parameter-file    : parameter file on which the template-file is based on. [required]
+                    -u --update_param_file : if the stack needs to be updated with the same template,  the parameter file for that template. [optional]
+                    -h --help
+    
+    "
+}
+
+fetch_ip_address()
+{
+    ## Script for fetching the public ip address and updating the parameter files.
+    myipaddress=`curl --no-buffer https://www.iplocation.net/find-ip-address | grep 'IP Address is'| cut -f3 -d">"| cut -f1 -d"<"`
+
+    sed -i -e 's/"SSHLocation".*/"SSHLocation","ParameterValue": "'"${myipaddress}"'\/32"/' ${PARAM_FILE}
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -s | --stack-name )     shift
+                                STACK_NAME=$1
+                                ;;
+        -t | --template-file )  shift
+                                TEMPLATE_NAME=$1
+                                ;;
+        -p | --parameter-file )  shift
+                                PARAM_FILE=$1
+                                ;;
+        -u | --update-param-file ) shift
+                                 UPDATE_FILE_NAME=$1
+                                 ;;
+        -h | --help )           usage
+                                exit
+                                ;;
+        * )                     usage
+                                exit 1
+    esac
+    shift
+done
+
+if [ -z ${STACK_NAME} ]| [ -z ${PARAM_FILE} ] | [ -z ${TEMPLATE_NAME} ]
+then
+    usage
+    exit 1
+fi
+
+fetch_ip_address
+
+response1=`aws cloudformation \
+        create-stack \
+        --stack-name ${STACK_NAME} \
+        --template-body file://${TEMPLATE_NAME} \
+        --parameters file://${PARAM_FILE} \
+        --capabilities CAPABILITY_NAMED_IAM`
+stat=$?
+if [ ${stat} != 0 ]
+then
+    exit ${stat}
+fi
+
+echo "Stack ${STACK_NAME} creation in progress"
+
+while true
+do
+   response=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} | jq '.Stacks[].StackStatus' | tr -d '"' `
+   if [ "${response}" = "CREATE_COMPLETE" ]
+   then
+        status="SUCCESS"
+        break
+   elif [ "${response}" = "ROLLBACK_IN_PROGRESS" ]
+   then
+        status="FAILURE"
+        break
+   elif [ "${response}" = "ROLLBACK_COMPLETE" ]
+   then
+        status="FAILURE"
+        break
+   else
+        sleep 30
+   fi
+done
+
+if [ "${status}" = "SUCCESS" ]
+then
+    echo "Stack ${STACK_NAME} created sucessfully"
+    if [ ! -z ${UPDATE_FILE_NAME} ]
+    then
+        echo "Starting update of the stack. Using ${TEMPLATE_NAME} as the template and ${UPDATE_FILE_NAME} as the parameter file name."
+       respose2=`aws cloudformation \
+        update-stack \
+        --stack-name ${STACK_NAME} \
+        --parameters file://${UPDATE_FILE_NAME} \
+        --use-previous-template \
+        --capabilities CAPABILITY_NAMED_IAM`
+
+        stat=$?
+        if [ ${stat} != 0 ]
+        then
+            exit ${stat}
+        fi
+
+        while true
+        do
+            response=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} | jq '.Stacks[].StackStatus' | tr -d '"' `
+            if [ "${response}" = "UPDATE_COMPLETE" ]
+            then
+                status="UPDATE_SUCCESS"
+                break
+            elif [ "${response}" = "UPDATE_ROLLBACK_IN_PROGRESS" ]
+            then
+                status="FAILURE"
+                break
+            else
+                sleep 30
+            fi
+        done
+    fi
+
+    if [ "${status}" = "UPDATE_SUCCESS" ]
+    then
+        echo "Stack ${STACK_NAME} updated successfully"
+    elif [ "${status}" = "FAILURE" ]
+    then
+        echo "Stack ${STACK_NAME} failed to update"
+        exit 1
+    fi
+
+elif [ "${status}" = "FAILURE" ]
+then
+    echo "Stack ${STACK_NAME} creation failed"
+    exit 1
+fi
+
+
+
+

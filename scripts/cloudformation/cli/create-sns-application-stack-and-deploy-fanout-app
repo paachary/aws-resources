@@ -1,0 +1,16 @@
+#!/bin/bash
+
+## Creating an SNS SQS stack for deploying an application for show casing fanout scenario
+
+create-update-stack \
+-s parent-sns-stack \
+-t /home/prashant/aws-resources/scripts/cloudformation/templates/sns-project-parent-template.json \
+-p /home/prashant/aws-resources/scripts/cloudformation/parameterfile/snsprojectprops.json \
+-u /home/prashant/aws-resources/scripts/cloudformation/parameterfile/updatesnsprojectprops.json
+
+status=$?
+
+if [ ${status} = 0 ]
+then
+    /home/prashant/aws-resources/scripts/cloudformation/templates/sns-fanout/scripts/codedpeloycreate.sh
+fi

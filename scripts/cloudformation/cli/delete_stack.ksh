@@ -1,0 +1,12 @@
+#!/bin/ksh
+
+if [ -z $1 ]
+then
+    echo "Please specify stack name"
+    exit 1
+fi
+
+
+aws cloudformation \
+        delete-stack \
+        --stack-name $1
