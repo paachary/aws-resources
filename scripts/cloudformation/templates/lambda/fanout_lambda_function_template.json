@@ -1,0 +1,205 @@
+##########################################################################
+## An AWS Cloudformation template for creating                           #
+##      * a Lambda function                                              #
+## Author - Prashant Acharya                                             #
+## Default Stack Name = NetworkStack                                     #
+##########################################################################
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation template for creating Lambda function for publishing the data from S3 bucket to SNS Topic. This relies on subnets_vpc_creation_template and sqs_sns_role_n_policy_template templates. Hence, stacks from these templates need to be created before a stack from this template is created.",
+
+  "Parameters" : {
+
+    "BucketName" : {
+      "Description" : "Name of bucket containing source files",
+      "Default":"ABCFG",
+      "Type" : "String"
+    },
+
+    "NewBucketName" : {
+      "Description" : "Name of bucket containing source files",
+      "Default":"ABCFG",
+      "Type" : "String"
+    },
+
+    "NetworkStackName" : {
+        "Description" : "Stack Name which was used to vpc and subnets",
+        "Type": "String",
+        "MinLength" : 1,
+        "MaxLength" : 255,
+        "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+        "Default" : "SomeStackName"
+    },
+      
+    "SNSSQSRoleStackName" : {
+        "Description" : "Stack Name which was used to required roles and policies for fanout project",
+        "Type": "String",
+        "MinLength" : 1,
+        "MaxLength" : 255,
+        "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+        "Default" : "SomeStackName"
+    },
+      
+    "LambdaRoleName" : {
+        "Description" : "Role name of the lambda function which overrides the role within the SNSSQSRoleStackName",
+        "Type": "String",
+        "Default" : "NA"
+    },
+
+    "LambdaFunctionName" : {
+      "Description" : "Name of 1st SQS Queue",
+      "Default": "fanOutLambdaFunction",
+      "Type" : "String"
+    },
+      
+    "PublicSecGroupId" : {
+        "Description" : "Public Security Group id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+      
+    "PrivateSubnetId1" : {
+        "Description" : "Private Subnet id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+      
+    "PrivateSubnetId2" : {
+        "Description" : "Private Subnet id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+      
+    "PrivateSubnetId3" : {
+        "Description" : "Private Subnet id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+      
+    "PrivateSubnetId4" : {
+        "Description" : "Private Subnet id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+   
+   "UpdateStack" : {
+        "Description" : "Is the Stack getting upgraded",
+        "Type" : "String",
+        "Default" : "NO"
+   }
+
+  },
+    
+  "Conditions" : {
+      "IsNestedStack" : {"Fn::Equals" : [{"Ref" : "LambdaRoleName"}, "NA"]},
+      "IsUpdateStack" : {"Fn::Equals" : [{"Ref" : "UpdateStack"}, "YES"]}
+  },
+    
+  "Resources" : {
+      "LambdaFunction" : {
+        "Type": "AWS::Lambda::Function",
+        "Properties": {
+            "FunctionName" : { "Ref" : "LambdaFunctionName" },
+            "Description" : "Lambda function to trigger subscription to topic when a security file arrives in an S3 bucket.",
+            "Handler": "pulish_to_topic.handler",
+            "Role": { "Fn::If" : 
+                        [ "IsNestedStack" ,
+                            { "Fn::ImportValue" : {"Fn::Sub": "${SNSSQSRoleStackName}-LambdaRole" } },
+                            { "Ref" : "LambdaRoleName" }
+                        ] 
+                    },
+            "Code": {
+                "S3Bucket": {"Ref" : "BucketName"},
+                "S3Key": "sns_topic_publisher_lambda.zip"
+            },
+            "Runtime": "python3.6",
+            "Timeout": "3",
+            "TracingConfig": {
+                "Mode": "Active"
+            },
+            "VpcConfig" : {
+                "SecurityGroupIds" : [  
+                    { "Fn::If" : 
+                        [ "IsNestedStack" ,
+                           { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PublicWebServerSecurityGroupID" } },
+                           { "Ref" : "PublicSecGroupId" }
+                        ] 
+                    } 
+                ],
+                "SubnetIds" : [ 
+                     { "Fn::If" : 
+                        [ "IsNestedStack" ,
+                            { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID1" } },
+                            { "Ref" : "PrivateSubnetId1" }
+                        ] 
+                     },
+                     { "Fn::If" : 
+                        [ "IsNestedStack" ,
+                            { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID2" } },
+                            { "Ref" : "PrivateSubnetId2" }
+                        ] 
+                     },
+                     { "Fn::If" : 
+                        [ "IsNestedStack" ,
+                            { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID3" } },
+                            { "Ref" : "PrivateSubnetId3" }
+                        ] 
+                     },
+                     { "Fn::If" : 
+                        [ "IsNestedStack" ,
+                            { "Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID4" } },
+                            { "Ref" : "PrivateSubnetId4" }
+                        ] 
+                     }
+                ]
+            }
+        }
+      },
+
+      "BucketPermission" : {
+        "Type": "AWS::Lambda::Permission",
+        "DependsOn" : [ "LambdaFunction", "S3Bucket" ],
+        "Properties": {
+            "Action": "lambda:InvokeFunction",
+            "FunctionName": {"Ref": "LambdaFunction"},
+            "Principal": "s3.amazonaws.com",
+            "SourceAccount": {"Ref": "AWS::AccountId"},
+            "SourceArn": {"Fn::Sub": "arn:aws:s3:::${NewBucketName}"}
+        }
+      },
+
+      "S3Bucket":{
+        "Type": "AWS::S3::Bucket",
+        "Properties" : {
+          "BucketName" : { "Ref" : "NewBucketName" },
+          "NotificationConfiguration": 
+            { "Fn::If" : 
+             [ "IsUpdateStack", 
+                  { 
+                    "LambdaConfigurations": [ {
+                        "Event" : "s3:ObjectCreated:Put",
+                         "Function" : {"Fn::Sub" : "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LambdaFunctionName}"},
+                         "Filter" : {
+                           "S3Key" : {
+                             "Rules" : [
+                               {
+                                "Name" : "suffix",
+                                "Value" : "csv"
+                               }
+                             ]
+                           }
+                         }
+                       } 
+                    ]
+                  },
+                 {
+                    "Ref" : "AWS::NoValue"
+                 }
+             ]
+            }
+
+        }
+      }
+  }
+}

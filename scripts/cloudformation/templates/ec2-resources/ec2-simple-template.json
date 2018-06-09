@@ -1,0 +1,353 @@
+##########################################################################
+## An AWS Cloudformation template for creating                           #
+##      * two public web servers                                         #
+## Dependent Stack - NetworkStack                                        #
+## Author - Prashant Acharya                                             #
+##                                                                       #
+##########################################################################
+
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Creates an ec2 instance or a nat instance based on the conditions. The ec2 instance can be in a public or a private subnet. Please check the parameters which decide the type of instance being created.",
+
+  "Parameters" : {
+
+    "BucketName" : {
+      "Description" : "Name of bucket containing source files",
+      "Type" : "String",
+      "Default":"ABCDEF"
+    },
+
+    "NetworkStackName" : {
+        "Description" : "Stack Name which was used to vpc and subnets",
+        "Type": "String",
+        "MinLength" : 1,
+        "MaxLength" : 255,
+        "Default" : "NetworkStack"
+    },
+    
+    "InstanceType" : {
+      "Description" : "Whether NAT instance or simple EC2 instance",
+      "Type" : "String",
+      "Default" : "ec2",
+      "AllowedValues" : [ "nat" , "ec2" ],
+      "ConstraintDescription" : "value must be a either nat or ec2."
+    },
+    
+    "InternetFacing" :{
+      "Description" : "Whether EC2 instance is public facing or private",
+      "Type" : "String",
+      "Default" : "private",
+      "AllowedValues" : [ "private" , "public" ],
+      "ConstraintDescription" : "value must be either public or private."    
+    },
+      
+    "KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Default":"ABCDEF",
+      "ConstraintDescription" : "must be the name of an existing EC2 KeyPair."
+    },
+
+    "WebServerName"  :{
+      "Description" : "Name of the 1st WebApp Server to be displayed in the index html",
+      "Type" : "String",
+      "Default" : "WebApp"
+    },
+
+    "PublicSecGroupId" : {
+        "Description" : "Public Security Group id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+
+    "PrivateSecGroupId" : {
+        "Description" : "Private Security Group id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+      
+    "PublicSubnetId" : {
+        "Description" : "Public Subnet id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+      
+    "PrivateSubnetId" : {
+        "Description" : "Private Subnet id",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+
+    "NATRouteTable": {
+        "Description" : "NAT Route Table",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+      
+    "EC2InstanceProfile" : {
+        "Description" : "IAM Instance Profile",
+        "Type" : "String",
+        "Default" : "NA"
+    },
+    
+    "ScriptArchiveName" : {
+        "Description" : "Master Script Archive Name (.zip) file contanining scripts to be executed as a part of user data for ec2. It must contain a bootstrap.sh which executes the other scripts.",
+        "Type" : "String",
+        "Default" : "ec2scripts.zip"
+    },
+
+    "TagKey" : {
+        "Description" : "Tag Key to be applied to the instance",
+        "Type" : "String",
+        "Default" : "SomeTagKey"
+    },
+
+    "TagValue" : {
+        "Description" : "Tag Value to be applied to the instance",
+        "Type" : "String",
+        "Default" : "SomeTagValue"
+    },
+
+    "Environment" : {
+        "Description" : "Environment of the instance getting created into",
+        "Type" : "String",
+        "Default" : "Dev"
+    },
+
+    "SnsTopic" : {
+        "Description" : "Topic Name overrides the imported value if sent from within a nested stack",
+        "Type": "String",
+        "Default" : "NA"
+    },
+
+    "SqsQueue1Arn" : {
+        "Description" : "SQS Queue ARN overrides the imported value if sent from within a nested stack",
+        "Type": "String",
+        "Default" : "NA"
+    },
+
+    "SqsQueue2Arn" : {
+        "Description" : "SQS Queue ARN overrides the imported value if sent from within a nested stack",
+        "Type": "String",
+        "Default" : "NA"
+    },
+
+    "DynamodbArn" : {
+        "Description" : "DynamodDB ARN overrides the imported value if sent from within a nested stack",
+        "Type": "String",
+        "Default" : "NA"
+    }
+
+  },
+
+  "Mappings" : 
+  {
+    "AWSInstanceType2Arch" : {
+      "t2.micro"    : { "Arch" : "HVM64"  }
+    },
+    
+    "AWSInstanceType2NATArch" : {
+      "t2.micro"    : { "Arch" : "NATHVM64"  }
+    },
+    
+    "AWSRegionArch2AMI" : {
+      "ap-south-1"       : {"PV64" : "NOT_SUPPORTED", 
+                            "HVM64" : "ami-531a4c3c", 
+                            "HVMG2" : "ami-411e492e" , 
+                            "NATHVM64" : "ami-0b3f4aad2015b0e15"},
+      "us-east-1"        : {"PV64" : "NOT_SUPPORTED",
+                            "HVM64" : "ami-467ca739", 
+                            "NATHVM64" : "ami-01623d7b"}
+    },
+    
+    "AWSInstanceType2NATArch" : {
+      "t2.micro"    : { "Arch" : "NATHVM64"  }
+    },
+
+    "SubnetConfig" : {
+      "Public"     :{ "CIDR" : "0.0.0.0/0" }
+    }
+  },
+  
+  "Conditions" : {
+    "IsNATInstance" : {"Fn::Equals" : [{"Ref" : "InstanceType"}, "nat"]},
+    "IsEC2Instance" : {"Fn::Equals" : [{"Ref" : "InstanceType"}, "ec2"]},
+    "IsPublicInstance" : {"Fn::Equals" : [{"Ref" : "InternetFacing"}, "public"]},
+    "IsPrivateInstance" : {"Fn::Equals" : [{"Ref" : "InternetFacing"}, "private"]},
+    "HasPublicSecGroupId" : {"Fn::Equals" : [{"Ref" : "PublicSecGroupId"}, "NA"]},
+    "HasPrivateSecGroupId" : {"Fn::Equals" : [{"Ref" : "PrivateSecGroupId"}, "NA"]},
+    "HasPublicSubnetId" : {"Fn::Equals" : [{"Ref" : "PublicSubnetId"}, "NA"]},
+    "HasPrivateSubnetId" : {"Fn::Equals" : [{"Ref" : "PrivateSubnetId"}, "NA"]},
+    "HasNATRouteTable" : {"Fn::Equals" : [{"Ref" : "NATRouteTable"}, "NA"]},
+    "HasIamInstanceProfile" : {"Fn::Equals" : [{"Ref" : "EC2InstanceProfile"}, "NA"]}
+  },
+
+  "Resources" : {
+    "WebApp": {
+       "Type": "AWS::EC2::Instance",
+       "Metadata" :
+        { "Fn::If" : ["IsEC2Instance",
+            { 
+             "AWS::CloudFormation::Init" : {
+                "configSets" : {
+                 "Install_and_Configure" : [ "Install" , "Configure" ]
+                 },
+                 "Install" : {
+                    "packages" : {
+                     "yum" : {
+                        "httpd" : [],
+                        "tree" : [],
+                        "ruby" : [],
+                        "python36" : [],
+                        "jq"       : []
+                     }
+                    },
+
+                    "sources" : {
+                       "/home/ec2-user/" : { "Fn::Join" : ["", ["https://s3.", { "Ref" : "AWS::Region" },".amazonaws.com/", { "Ref" : "BucketName" },"/", {"Ref" : "ScriptArchiveName" } ]]}
+                    },
+
+                    "commands" : {
+                        "change_permissions" : {
+                            "command" : "chmod +x *.sh",
+                            "cwd"     : "/home/ec2-user"
+                        },
+                        
+                       "execute_bootstrap_script": {
+                            "command" : "/home/ec2-user/bootstrap.sh",
+                            "cwd": "/home/ec2-user"
+                       }
+                    }
+                 },
+
+                 "Configure" : {
+                    "commands" : {
+                      "01_create_sym_link_pip" : {
+                        "command" : { "Fn::Join" : ["", ["ln -fs /usr/bin/pip-3.6 /usr/bin/pip"]]}
+                      },
+                      "02_create_sym_link_python" : {
+                        "command" : { "Fn::Join" : ["", ["ln -fs /usr/bin/python36 /usr/bin/python"]]}
+                      },
+                      "03_install_boto" : {
+                        "command" : { "Fn::Join" : ["", ["pip install boto3"]]}
+                      },
+                      "04_configuring_regions_" : {
+                        "command" : { "Fn::Join" : ["", ["aws configure set region `curl --silent http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region`"]]}
+                      }
+                    }
+                }
+             }
+           },
+           {
+             "AWS::CloudFormation::Init" : {
+                "configSets" : {
+                 "Install_and_Configure" : [ "Install" ]
+                 },
+                 "Install" : {
+                    "packages" : {
+                     "yum" : {
+                        "git" : [],
+                        "tree" : [],
+                        "ruby" : [],
+                        "python36" : [],
+                        "jq"       : []
+                     }
+                    }
+                 }
+             }
+           }
+         ]
+        },
+       "Properties": {
+         "InstanceType" : "t2.micro",
+         "ImageId" : { "Fn::If" : [ "IsEC2Instance",
+                         { "Fn::FindInMap" : 
+                            [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+                             { "Fn::FindInMap" : [ "AWSInstanceType2Arch", "t2.micro", "Arch" ]}
+                            ]
+                         },
+                         { "Fn::FindInMap" : 
+                            [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+                             { "Fn::FindInMap" : [ "AWSInstanceType2NATArch", "t2.micro", "Arch" ]} 
+                            ] 
+                         }
+                     ]},
+          "SourceDestCheck" : { "Fn::If" : ["IsEC2Instance",
+                                            "true",
+                                            "false"]
+           },
+          "KeyName"  : { "Ref" : "KeyName" },
+          "IamInstanceProfile" : { "Fn::If" : [ "HasIamInstanceProfile",
+                                                 {"Ref" : "AWS::NoValue"},
+                                                 { "Ref" : "EC2InstanceProfile" }
+                                              ] 
+           },
+          "NetworkInterfaces": [ {
+              "DeviceIndex": "0",
+              "GroupSet":[{ "Fn::If" : ["IsEC2Instance",
+                           { "Fn::If" : ["IsPublicInstance",
+                            { "Fn::If" : ["HasPublicSecGroupId",
+                               {"Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PublicWebServerSecurityGroupID"}},
+                               {"Ref" : "PublicSecGroupId"} ]},
+                            {"Fn::If" :[ "HasPrivateSecGroupId",
+                               {"Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateWebServerSecurityGroupID"}},
+                               {"Ref" : "PrivateSecGroupId"}]}]},
+                           {"Fn::If" : ["HasPublicSecGroupId",
+                               {"Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-NatInstanceSecurityGroupID"}},
+                               {"Ref" : "PublicSecGroupId"} ]}]
+                          }],
+              "SubnetId":  { "Fn::If" : [ "IsEC2Instance",
+                              { "Fn::If" : ["IsPublicInstance",
+                                { "Fn::If" : ["HasPublicSubnetId",
+                                              {"Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PublicSubnetID2"}},
+                                              {"Ref": "PublicSubnetId" }]},
+                                { "Fn::If" :["HasPrivateSubnetId",
+                                             {"Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PrivateSubnetID2"}},
+                                              {"Ref": "PrivateSubnetId" }]}]},
+                              { "Fn::If" : ["HasPublicSubnetId",
+                                            {"Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-PublicSubnetID2"}},
+                                            {"Ref": "PublicSubnetId" }]}]
+                            }
+          }],
+          "Tags"     : [{"Key" : "Name", "Value" :  { "Ref" : "WebServerName" } },
+                        {"Key" : "Environment", "Value" : { "Ref": "Environment" } },
+                        {"Key" : {"Ref" : "TagKey"}, "Value" : { "Ref": "TagValue" } }
+                       ],
+          "UserData" : {
+            "Fn::Base64" : { "Fn::Join" : ["", [
+                "#!/bin/bash -v\n",
+                "yum update -y aws-cfn-bootstrap\n",
+                "/opt/aws/bin/cfn-init -v -s ", { "Ref" : "AWS::StackId" }, " --resource WebApp ",
+                " --configsets Install_and_Configure ",
+                " --region ", { "Ref" : "AWS::Region" } , "\n",
+                "# Signal status from cfn-init ",
+                "/opt/aws/bin/cfn-signal -e $? -s ", { "Ref" : "AWS::StackId" }, " --resource WebApp ",
+                " --region ", { "Ref" : "AWS::Region" }
+                        ]
+                    ]}
+          }
+       }
+    },
+      
+    "PublicRouteNAT" : {
+       "Type" : "AWS::EC2::Route",
+       "Condition" : "IsNATInstance",
+       "Properties" : {
+         "RouteTableId" :{ "Fn::If" : ["HasNATRouteTable",
+                                         {"Fn::ImportValue" : {"Fn::Sub": "${NetworkStackName}-NATRouteTable"}},
+                                         { "Ref" : "NATRouteTable" }]
+         },
+         "DestinationCidrBlock" : "0.0.0.0/0",
+         "InstanceId" : { "Ref" : "WebApp" }
+       }
+    }
+  },
+  "Outputs" : {
+    "WebappInstanceID" : {
+       "Description": "The WebApp ID",  
+       "Value" :{ "Fn::GetAtt" : [ "WebApp", "PublicDnsName" ]}
+    }
+  }
+}

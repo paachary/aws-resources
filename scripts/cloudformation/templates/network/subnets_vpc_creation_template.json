@@ -424,17 +424,54 @@
       }
     },
       
-    "NATInstancSecuirityGroup" : {
+    "NATInstancSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "VpcId" : { "Ref" : "cfvpc" },
-        "GroupDescription" : "Enable SSH access via port 22",
+        "GroupDescription" : "NAT Instance Security group, allowing inbound http and https in private subnets",
         "SecurityGroupIngress" : [
-          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : { "Ref" : "SSHLocation"}},
-          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]}},
-          {"IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp" : { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]}}
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22",  "CidrIp": { "Ref" : "SSHLocation"}},
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80",  "CidrIp":  { "Fn::Join" : [ "", [{"Ref" : "SubnetSufix" },".",{ "Fn::FindInMap" : [ "SubnetConfig", "Private11", "CIDR" ]}]]}},
+          {"IpProtocol" : "tcp", "FromPort" : "443","ToPort" : "443", "CidrIp":  { "Fn::Join" : [ "", [{"Ref" : "SubnetSufix" },".",{ "Fn::FindInMap" : [ "SubnetConfig", "Private11", "CIDR" ]}]]} },
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80",  "CidrIp":  { "Fn::Join" : [ "", [{"Ref" : "SubnetSufix" },".",{ "Fn::FindInMap" : [ "SubnetConfig", "Private12", "CIDR" ]}]]} },
+          {"IpProtocol" : "tcp", "FromPort" : "443","ToPort" : "443", "CidrIp":  { "Fn::Join" : [ "", [{"Ref" : "SubnetSufix" },".",{ "Fn::FindInMap" : [ "SubnetConfig", "Private12", "CIDR" ]}]]} },
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80",  "CidrIp":  { "Fn::Join" : [ "", [{"Ref" : "SubnetSufix" },".",{ "Fn::FindInMap" : [ "SubnetConfig", "Private21", "CIDR" ]}]]} },
+          {"IpProtocol" : "tcp", "FromPort" : "443","ToPort" : "443", "CidrIp":  { "Fn::Join" : [ "", [{"Ref" : "SubnetSufix" },".",{ "Fn::FindInMap" : [ "SubnetConfig", "Private21", "CIDR" ]}]]} },
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80",  "CidrIp":  { "Fn::Join" : [ "", [{"Ref" : "SubnetSufix" },".",{ "Fn::FindInMap" : [ "SubnetConfig", "Private22", "CIDR" ]}]]} },
+          {"IpProtocol" : "tcp", "FromPort" : "443","ToPort" : "443", "CidrIp": { "Fn::Join" : [ "", [{"Ref" : "SubnetSufix" },".",{ "Fn::FindInMap" : [ "SubnetConfig", "Private22", "CIDR" ]}]]} }
+        ],
+        "SecurityGroupEgress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp": { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]}},
+          {"IpProtocol" : "tcp", "FromPort" : "443","ToPort" : "443","CidrIp": { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]}}
+        ],
+        "Tags"     : [ {"Key" : "Name", "Value" : "NATInstancSecurityGroup" }]
+      }
+    },
+    
+    "PublicELBSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "cfvpc" },
+        "GroupDescription" : "Public Elastics load balancer security group",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80",  "CidrIp": { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]}},
+          {"IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp": { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]}}
          ],
-        "Tags"     : [ {"Key" : "Name", "Value" : "NATInstancSecuirityGroup" }]
+        "Tags"     : [ {"Key" : "Name", "Value" : "PublicELBSecurityGroup" }]
+      }
+    },
+      
+    "PvtWebServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "cfvpc" },
+        "GroupDescription" : "Security Group for instances in private subnet",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22",  "CidrIp" : { "Ref" : "SSHLocation"}},
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80",  "SourceSecurityGroupId" : { "Ref" : "PublicELBSecurityGroup"} },
+          {"IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443","SourceSecurityGroupId" : { "Ref" : "PublicELBSecurityGroup"}}
+         ],
+        "Tags"     : [ {"Key" : "Name", "Value" : "PvtWebServerSecurityGroup" }]
       }
     },
       
@@ -442,13 +479,68 @@
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "VpcId" : { "Ref" : "cfvpc" },
-        "GroupDescription" : "Enable SSH access via port 22",
+        "GroupDescription" : "Public Webserver security group",
         "SecurityGroupIngress" : [
-          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22",  "SourceSecurityGroupId" : { "Ref" : "NATInstancSecuirityGroup"}},
-          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80",  "SourceSecurityGroupId" : { "Ref" : "NATInstancSecuirityGroup"}},
-          {"IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443",  "SourceSecurityGroupId" : { "Ref" : "NATInstancSecuirityGroup"}}
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22",  "CidrIp" : { "Ref" : "SSHLocation"}},
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80",  "CidrIp": { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]}},
+          {"IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp": { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]}}
          ],
         "Tags"     : [ {"Key" : "Name", "Value" : "WebAppInstanceSecurityGroup" }]
+      }
+    },
+      
+    "OrclDBServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "cfvpc" },
+        "GroupDescription" : "Oracle Database server security group",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22",  "CidrIp" : { "Ref" : "SSHLocation"}},
+          {"IpProtocol" : "tcp", "FromPort" : "1521","ToPort" :"1521","SourceSecurityGroupId" : { "Ref" : "WebAppInstanceSecurityGroup"}}
+
+         ],
+        "Tags"     : [ {"Key" : "Name", "Value" : "OrclDBServerSecurityGroup" }]
+      }
+    },
+      
+    "MySQLDBServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "cfvpc" },
+        "GroupDescription" : "MySQL Database server security group",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22",  "CidrIp" : { "Ref" : "SSHLocation"}},
+          {"IpProtocol" : "tcp", "FromPort" : "3306","ToPort" :"3306","SourceSecurityGroupId" : { "Ref" : "WebAppInstanceSecurityGroup"}}
+         ],
+        "Tags"     : [ {"Key" : "Name", "Value" : "MySQLDBServerSecurityGroup" }]
+      }
+    },
+      
+    "PostgreSQLDBServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "cfvpc" },
+        "GroupDescription" : "PostgresSQL Database server security group",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22",  "CidrIp" : { "Ref" : "SSHLocation"}},
+          {"IpProtocol" : "tcp", "FromPort" : "5432","ToPort" :"5432","SourceSecurityGroupId" : { "Ref" : "WebAppInstanceSecurityGroup"}}
+
+         ],
+        "Tags"     : [ {"Key" : "Name", "Value" : "PostgreSQLDBServerSecurityGroup" }]
+      }
+    },
+      
+    "RedisServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "cfvpc" },
+        "GroupDescription" : "Redis server security group",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22",  "CidrIp" : { "Ref" : "SSHLocation"}},
+          {"IpProtocol" : "tcp", "FromPort" : "6379","ToPort" :"6379","SourceSecurityGroupId" : { "Ref" : "WebAppInstanceSecurityGroup"}}
+
+         ],
+        "Tags"     : [ {"Key" : "Name", "Value" : "RedisServerSecurityGroup" }]
       }
     }
   },
@@ -487,15 +579,45 @@
         "Value":{ "Ref": "PrivateSubnet2cfvpcaz2" },
         "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-PrivateSubnetID4" }}
     },
-    "WebServerPvtSecurityGroup" : {
-        "Description":"Private Security Group",
-        "Value":{ "Ref": "WebAppInstanceSecurityGroup" },
-        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-WebServerPvtSecurityGroupID" }}
+    "PublicELBSecurityGroup" : {
+        "Description":"Public ELB Security Group",
+        "Value":{ "Ref": "PublicELBSecurityGroup" },
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-PublicELBSecurityGroupID" }}
     },
-    "WebServerPubSecurityGroup" : {
+    "PublicWebServerSecurityGroup" : {
         "Description":"Public Security Group",
-        "Value":{ "Ref": "NATInstancSecuirityGroup" },
-        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-WebServerPubSecurityGroupID" }}
+        "Value":{ "Ref": "WebAppInstanceSecurityGroup" },
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-PublicWebServerSecurityGroupID" }}
+    },
+    "PrivateWebServerSecurityGroup" : {
+        "Description":"Private Security Group",
+        "Value":{ "Ref": "PvtWebServerSecurityGroup" },
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-PrivateWebServerSecurityGroupID" }}
+    },
+    "NatInstanceSecurityGroup" : {
+        "Description":"Nat Instance Security Group",
+        "Value":{ "Ref": "NATInstancSecurityGroup" },
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-NatInstanceSecurityGroupID" }}
+    },
+    "OrclDBServerSecurityGroup" : {
+        "Description":"Private Security Group",
+        "Value":{ "Ref": "OrclDBServerSecurityGroup" },
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-OrclDBServerSecurityGroupID" }}
+    },
+    "MySQLDBServerSecurityGroup" : {
+        "Description":"Private Security Group",
+        "Value":{ "Ref": "MySQLDBServerSecurityGroup" },
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-MySQLDBServerSecurityGroupID" }}
+    },
+    "PostgreSQLDBServerSecurityGroup" : {
+        "Description":"Private Security Group",
+        "Value":{ "Ref": "PostgreSQLDBServerSecurityGroup" },
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-PostgreSQLDBServerSecurityGroupID" }}
+    },
+    "RedisServerSecurityGroup" : {
+        "Description":"Private Security Group",
+        "Value":{ "Ref": "RedisServerSecurityGroup" },
+        "Export":{ "Name": {"Fn::Sub": "${AWS::StackName}-RedisServerSecurityGroupID" }}
     },
     "NATRouteTable" : {
         "Description":"Public Security Group",

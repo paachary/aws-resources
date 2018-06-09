@@ -1,0 +1,371 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation template for creating IAM roles and Policies. This will have a dependency for the stack created for installing webapps and lambda function.",
+
+  "Parameters" : {
+
+    "BucketName" : {
+      "Description" : "Name of bucket containing source files",
+      "Default":"ANVGC",
+      "Type" : "String"
+    },
+      
+    "NewBucketName" : {
+      "Description" : "Name of bucket containing source files",
+      "Default":"ANVGC",
+      "Type" : "String"
+    },
+
+    "SNSSQSStackName" : {
+        "Description" : "Template Name of the stack creating SNS Topic and SQS queues",
+        "Type": "String",
+        "MinLength" : 1,
+        "MaxLength" : 255,
+        "AllowedPattern" : "^[a-zA-Z][-a-zA-Z0-9]*$",
+        "Default" : "SNSFanoutStack"
+    },
+
+    "SnsTopic" : {
+        "Description" : "Topic Name overrides the imported value if sent from within a nested stack",
+        "Type": "String",
+        "Default" : "NA"
+    },
+
+    "SqsQueue1Arn" : {
+        "Description" : "SQS Queue ARN overrides the imported value if sent from within a nested stack",
+        "Type": "String",
+        "Default" : "NA"
+    },
+
+    "SqsQueue2Arn" : {
+        "Description" : "SQS Queue ARN overrides the imported value if sent from within a nested stack",
+        "Type": "String",
+        "Default" : "NA"
+    },
+
+    "DynamodbArn" : {
+        "Description" : "DynamodDB ARN overrides the imported value if sent from within a nested stack",
+        "Type": "String",
+        "Default" : "NA"
+    },
+      
+    "SNSPolicy" : {
+      "Description" : "Name of SNS Policy",
+      "Default":"FanOutSNSPolicy",
+      "Type" : "String"
+    },
+      
+    "SQSPolicy" : {
+      "Description" : "Name of SQS Queue Policy",
+      "Default":"FanOutSQSQueue1",
+      "Type" : "String"
+    },
+      
+    "DynamoDBPolicy" : {
+      "Description" : "Name of Dynamodb Policy",
+      "Default":"DynamoDBPolicy",
+      "Type" : "String"
+    },
+      
+    "EC2RoleName" : {
+      "Description" : "Name of EC2 role name",
+      "Default":"EC2FanOutRole",
+      "Type" : "String"
+    },
+      
+    "LambdaRoleName" : {
+      "Description" : "Name of the lambda function role name",
+      "Default": "LambdaFanOutRole",
+      "Type" : "String"
+    }
+  },
+    
+  "Conditions" : {
+    "IsNestedStack" : {"Fn::Equals" : [{"Ref" : "SnsTopic"}, "NA"]}
+  },
+
+  "Resources" : {
+      
+    "S3Permissions" : {
+        "Type" : "AWS::IAM::Policy",
+        "Properties": {
+            "PolicyName" :"S3Permissions",
+            "Roles" :[ { "Ref" : "EC2FanOutRole" }
+             ],
+            "PolicyDocument" : {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "1",
+                        "Effect": "Allow",
+                        "Action": [
+                              "s3:GetObject",
+                              "s3:Get*",
+                              "s3:List*",
+                              "iam:PassRole"
+                        ],
+                        "Resource": [ 
+                            {"Fn::Sub": "arn:aws:s3:::${BucketName}/*" },
+                            "arn:aws:s3:::aws-codedeploy-us-east-2/*",
+                            "arn:aws:s3:::aws-codedeploy-us-east-1/*",
+                            "arn:aws:s3:::aws-codedeploy-us-west-1/*",
+                            "arn:aws:s3:::aws-codedeploy-us-west-2/*",
+                            "arn:aws:s3:::aws-codedeploy-ca-central-1/*",
+                            "arn:aws:s3:::aws-codedeploy-eu-west-1/*",
+                            "arn:aws:s3:::aws-codedeploy-eu-west-2/*",
+                            "arn:aws:s3:::aws-codedeploy-eu-west-3/*",
+                            "arn:aws:s3:::aws-codedeploy-eu-central-1/*",
+                            "arn:aws:s3:::aws-codedeploy-ap-northeast-1/*",
+                            "arn:aws:s3:::aws-codedeploy-ap-northeast-2/*",
+                            "arn:aws:s3:::aws-codedeploy-ap-southeast-1/*",
+                            "arn:aws:s3:::aws-codedeploy-ap-southeast-2/*",
+                            "arn:aws:s3:::aws-codedeploy-ap-south-1/*",
+                            "arn:aws:s3:::aws-codedeploy-sa-east-1/*"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "FanOutSNSPolicy" : {
+        "Type" : "AWS::IAM::Policy",
+        "Properties": {
+            "PolicyName" : { "Ref": "SNSPolicy" },
+            "Roles" :[ { "Ref" : "EC2FanOutRole" },
+                       { "Ref" : "LambdaFanOutRole" }
+             ],
+            "PolicyDocument" : {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "1",
+                        "Effect": "Allow",
+                        "Action": [
+                            "sns:Publish",
+                            "sns:GetTopicAttributes",
+                            "sns:DeleteTopic",
+                            "sns:CreateTopic",
+                            "sns:Subscribe",
+                            "iam:PassRole"
+                        ],
+                        "Resource": [ 
+                            { "Fn::If" : 
+                              [ "IsNestedStack",
+                                  { "Fn::ImportValue" : {"Fn::Sub": "${SNSSQSStackName}-Topic" } },
+                                  { "Ref" : "SnsTopic" } 
+                              ] 
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "FanOutSQSPolicy" : {
+        "Type" : "AWS::IAM::Policy",
+        "Properties": {
+            "PolicyName" : { "Ref": "SQSPolicy" },
+            "Roles" :[ { "Ref" : "EC2FanOutRole" }
+             ],
+            "PolicyDocument" : {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "2",
+                        "Effect": "Allow",
+                        "Action": [
+                            "sqs:DeleteMessage",
+                            "sqs:GetQueueUrl",
+                            "sqs:ReceiveMessage",
+                            "sqs:DeleteQueue",
+                            "sqs:CreateQueue",
+                            "iam:PassRole"
+                        ],
+                        "Resource": [
+                            { "Fn::If" : 
+                              [ "IsNestedStack",
+                                { "Fn::ImportValue" : {"Fn::Sub": "${SNSSQSStackName}-Queue1ARN" } },
+                                { "Ref" : "SqsQueue1Arn" }
+                              ]
+                            },
+                            { "Fn::If" : 
+                              [ "IsNestedStack",
+                                { "Fn::ImportValue" : {"Fn::Sub": "${SNSSQSStackName}-Queue2ARN" } },
+                                { "Ref" : "SqsQueue2Arn" }
+                              ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "DynamocDBGetPutPolicy" : {
+        "Type" : "AWS::IAM::Policy",
+        "Properties": {
+            "PolicyName" : { "Ref": "DynamoDBPolicy" },
+            "Roles" :[ { "Ref" : "EC2FanOutRole" }
+             ],
+            "PolicyDocument" : {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "2",
+                        "Effect": "Allow",
+                        "Action": [
+                            "dynamodb:BatchGetItem",
+                            "dynamodb:BatchWriteItem",
+                            "dynamodb:PutItem",
+                            "dynamodb:DeleteItem",
+                            "dynamodb:GetItem",
+                            "dynamodb:Scan",
+                            "dynamodb:Query",
+                            "dynamodb:UpdateItem",
+                            "iam:PassRole"
+                        ],
+                        "Resource": 
+                        [ { "Fn::If" : 
+                              [ "IsNestedStack",
+                                 { "Fn::ImportValue" : {"Fn::Sub": "${SNSSQSStackName}-TableArn" } },
+                                 { "Ref" : "DynamodbArn" }
+                              ]
+                          },
+                           "arn:aws:dynamodb:*:*:table/*/index/*"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "LambdaExecS3VPCPolicy" : {
+        "Type" : "AWS::IAM::Policy",
+        "Properties": {
+            "PolicyName" :"lamdba_exec_s3_vpc_policy",
+            "Roles" :[ { "Ref" : "LambdaFanOutRole" }
+             ],
+            "PolicyDocument" : {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "1",
+                        "Effect": "Allow",
+                        "Action": [
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents",
+                            "iam:PassRole"
+                        ],
+                        "Resource": [ 
+                           "arn:aws:logs:*:*:*"
+                        ]
+                    },
+                    {
+                        "Sid": "2",
+                        "Effect": "Allow",
+                        "Action": [
+                              "s3:GetObject"
+                        ],
+                        "Resource": [ 
+                             {"Fn::Sub": "arn:aws:s3:::${NewBucketName}/security.csv" }
+                        ]
+                    },
+                    {
+                        "Sid": "3",
+                        "Effect": "Allow",
+                        "Action": [
+                            "ec2:Describe*",
+                            "ec2:CreateNetworkInterface",
+                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:DeleteNetworkInterface"
+                        ],
+                        "Resource": [
+                            "*"
+                        ]
+                    },
+                    {
+                        "Sid": "4",
+                        "Effect": "Allow",
+                        "Action": [
+                           "xray:PutTraceSegments"
+                        ],
+                        "Resource": [
+                            "*"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+
+    "EC2FanOutRole" : {
+       "Type" : "AWS::IAM::Role",
+       "Properties" : {
+           "RoleName" : { "Ref" : "EC2RoleName" },
+           "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [ { 
+                    "Effect": "Allow", 
+                    "Principal": 
+                        {"Service": ["ec2.amazonaws.com"] }, 
+                          "Action": ["sts:AssumeRole"] 
+                   }
+                ]
+           },
+           "Path": "/"
+       }
+    },
+      
+
+    "EC2InstanceProfile" : {
+        "Type": "AWS::IAM::InstanceProfile",
+        "Properties": {
+            "Path": "/",
+            "Roles": [ { "Ref": "EC2FanOutRole" } ],
+            "InstanceProfileName" : "EC2InstanceProfile"
+        }
+    },
+
+    "LambdaFanOutRole" : {
+       "Type" : "AWS::IAM::Role",
+       "Properties" : {
+           "RoleName" : { "Ref" : "LambdaRoleName" },
+           "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [ { 
+                    "Effect": "Allow", 
+                    "Principal": 
+                        {"Service": ["lambda.amazonaws.com"] }, 
+                          "Action": ["sts:AssumeRole"] 
+                   }
+                ]
+           },
+           "Path": "/"
+       }
+    }
+  },
+
+  "Outputs" : {
+      "EC2FanOutRoleARN" : {
+          "Description" : "ARN for EC2 Fanout role",
+          "Value" :  {"Fn::GetAtt" : [ "EC2FanOutRole" , "Arn"] },
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-EC2Role" } }
+      },
+      
+      "EC2InstanceProfile" : {
+          "Description" : "Instance Profile to be applied to the instances",
+          "Value" :  "EC2InstanceProfile" ,
+          "Export" : { "Name" : {"Fn::Sub" : "${AWS::StackName}-EC2InstanceProfile" } }
+      },
+
+      "LambdaFanOutRoleARN" : {
+          "Description" : "ARN for Lambda Fanout role",
+          "Value" : {"Fn::GetAtt" : [ "LambdaFanOutRole" , "Arn"] },
+          "Export" : { "Name" :  {"Fn::Sub" : "${AWS::StackName}-LambdaRole" }} 
+      }
+  }
+}

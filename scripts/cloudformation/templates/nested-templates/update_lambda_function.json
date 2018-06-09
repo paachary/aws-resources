@@ -1,0 +1,46 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Template used for updating the sns-sqs parent stack after the main stack has been created",
+
+  "Parameters" : {
+
+    "BucketName" : {
+      "Description" : "Name of bucket containing source files",
+      "Default":"ABCHFC",
+      "Type" : "String"
+    },
+
+    "LambdaFunctionName" : {
+      "Description" : "Name of 1st SQS Queue",
+      "Default": "fanOutLambdaFunction",
+      "Type" : "String"
+    }
+  },
+    
+  "Resources" : {
+      "S3BucketNotification":{
+        "Type": "AWS::S3::Bucket",
+        "Properties" : {
+          "BucketName" : { "Ref" : "BucketName" },
+          "NotificationConfiguration": {
+            "LambdaConfigurations": [ {
+                "Event" : "s3:ObjectCreated:Put",
+                 "Function" : {"Fn::Sub" : "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${LambdaFunctionName}"},
+                 "Filter" : {
+                   "S3Key" : {
+                     "Rules" : [
+                       {
+                        "Name" : "suffix",
+                        "Value" : "csv"
+                       }
+                     ]
+                   }
+                 }
+               } 
+            ]
+          }
+        }
+      }
+  }
+}
