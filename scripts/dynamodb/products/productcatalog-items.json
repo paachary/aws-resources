@@ -1,0 +1,109 @@
+{
+    "ProductCatalog": [
+        {
+            "PutRequest": {
+                "Item": {
+                            "Id"              : {"N":"1101"},
+                            "Title"           : {"S":"Book 101 Title"},
+                            "ISBN"            : {"S":"111-1111111111"},
+                            "Authors"         : {"SS":["Author1"]},
+                            "Price"           : {"S":"2"},
+                            "Dimensions"      : {"S":"8.5 x 11.0 x 0.5"},
+                            "PageCount"       : {"S":"500"},
+                            "InPublication"   : {"S":"1"},
+                            "ProductCategory" : {"S":"Book"}
+                    }
+            }   
+        },
+        {
+             "PutRequest": {
+                "Item": {
+                        "Id"              : {"N":"103"},
+                        "Title"           : {"S":"Book 103 Title"},
+                        "ISBN"            : {"S":"333-3333333333"},
+                        "Authors"         : {"SS":["Author1", "Author2"]},
+                        "Price"           : {"S":"2000"},
+                        "Dimensions"      : {"S":"8.5 x 11.0 x 1.5"},
+                        "PageCount"       : {"S":"600"},
+                        "InPublication"   : {"S":"0"},
+                        "ProductCategory" : {"S":"Book"}
+                      }
+             }
+        },
+        {
+            "PutRequest": {
+                "Item": {
+                        "Id"              : {"N":"201"},
+                        "Title"           : {"S":"18-Bike-201"},
+                        "Description"     : {"S":"201 Description"},
+                        "BicycleType"     : {"S":"Road"},
+                        "Brand"           : {"S":"Mountain A"},
+                        "Price"           : {"S":"100"},
+                        "Gender"          : {"S":"M"},
+                        "Color"           : {"SS":["Red", "Black"]},
+                        "ProductCategory" : {"S":"Bicycle"}
+                }
+            }
+        },
+        {
+            "PutRequest": {
+                "Item": {
+                        "Id"              : {"N":"202"},
+                        "Title"           : {"S":"21-Bike-202"},
+                        "Description"     : {"S":"202 Description"},
+                        "BicycleType"     : {"S":"Road"},
+                        "Brand"           : {"S":"Brand-Company A"},
+                        "Price"           : {"S":"200"},
+                        "Gender"          : {"S":"M"},
+                        "Color"           : {"SS":["Green", "Black"]},
+                        "ProductCategory" : {"S":"Bicycle"}
+                }
+            }
+        },
+        {
+            "PutRequest": {
+                    "Item": {
+                        "Id"              : {"N":"203"},
+                        "Title"           : {"S":"19-Bike-203"},
+                        "Description"     : {"S":"203 Description"},
+                        "BicycleType"     : {"S":"Road"},
+                        "Brand"           : {"S":"Brand-Company B"},
+                        "Price"           : {"S":"300"},
+                        "Gender"          : {"S":"W"},
+                        "Color"           : {"SS":["Red", "Green", "Black"]},
+                        "ProductCategory" : {"S":"Bicycle"}                                
+                    }
+            }
+        },
+        {
+            "PutRequest": {
+                    "Item": {
+                        "Id"              : {"N":"204"},
+                        "Title"           : {"S":"18-Bike-204"},
+                        "Description"     : {"S":"204 Description"},
+                        "BicycleType"     : {"S":"Mountain"},
+                        "Brand"           : {"S":"Brand-Company B"},
+                        "Price"           : {"S":"400"},
+                        "Gender"          : {"S":"W"},
+                        "Color"           : {"SS":["Red"]},
+                        "ProductCategory" : {"S":"Bicycle"}
+                    }
+            }
+        },
+        {
+            "PutRequest": {
+                    "Item": {
+                        "Id"              : {"N":"205"},
+                        "Title"           : {"S":"20-Bike-205"},
+                        "Description"     : {"S":"205 Description"},
+                        "BicycleType"     : {"S":"Hybrid"},
+                        "Brand"           : {"S":"Brand-Company C"},
+                        "Price"           : {"S":"500"},
+                        "Gender"          : {"S":"B"},
+                        "Color"           : {"SS":["Red", "Black"]},
+                        "ProductCategory" : {"S":"Bicycle"}
+                    }
+            }
+        }
+    ]
+}

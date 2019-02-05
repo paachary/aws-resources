@@ -1,0 +1,36 @@
+{  
+   "AttributeDefinitions":[  
+      {  
+         "AttributeName":"ProductCatalog",
+         "AttributeType":"S"
+      },
+      {  
+         "AttributeName":"Price",
+         "AttributeType":"S"
+      }
+   ], 
+   "GlobalSecondaryIndexUpdates":[  
+      {  
+         "Create":{  
+            "IndexName":"Price-Type-Idx",
+            "KeySchema":[  
+               {  
+                  "AttributeName":"ProductCatalog",
+                  "KeyType":"HASH"
+               },
+               {  
+                  "AttributeName":"Price",
+                  "KeyType":"RANGE"
+               }
+            ],
+            "Projection":{  
+               "ProjectionType":"ALL"
+            },
+            "ProvisionedThroughput":{  
+               "ReadCapacityUnits":5,
+               "WriteCapacityUnits":5
+            }
+         }
+      }
+   ]
+}
