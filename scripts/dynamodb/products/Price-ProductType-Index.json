@@ -1,7 +1,7 @@
 {  
    "AttributeDefinitions":[  
       {  
-         "AttributeName":"ProductCatalog",
+         "AttributeName":"ProductCategory",
          "AttributeType":"S"
       },
       {  
@@ -15,7 +15,7 @@
             "IndexName":"Price-Type-Idx",
             "KeySchema":[  
                {  
-                  "AttributeName":"ProductCatalog",
+                  "AttributeName":"ProductCategory",
                   "KeyType":"HASH"
                },
                {  
