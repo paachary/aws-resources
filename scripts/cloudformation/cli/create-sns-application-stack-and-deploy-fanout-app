@@ -4,9 +4,9 @@
 
 create-update-stack \
 -s parent-sns-stack \
--t /home/prashant/aws-resources/scripts/cloudformation/templates/nested-templates/sns-project-parent-template.json \
--p /home/prashant/aws-resources/scripts/cloudformation/parameterfile/snsprojectprops.json \
--u /home/prashant/aws-resources/scripts/cloudformation/parameterfile/updatesnsprojectprops.json
+-t $HOME/aws-resources/scripts/cloudformation/templates/nested-templates/sns-project-parent-template.json \
+-p $HOME/aws-resources/scripts/cloudformation/parameterfile/snsprojectprops.json \
+-u $HOME/aws-resources/scripts/cloudformation/parameterfile/updatesnsprojectprops.json
 
 status=$?
 
@@ -14,5 +14,5 @@ if [ ${status} = 0 ]
 then
     echo "Starting application code deployment"
 
-    /home/prashant/aws-resources/scripts/sqs-sns/code-deploy-using-github/code-deploy-github.ksh
+    $HOME/aws-resources/scripts/sqs-sns/code-deploy-using-github/code-deploy-github.ksh
 fi
