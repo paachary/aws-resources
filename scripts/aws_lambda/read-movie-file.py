@@ -3,7 +3,7 @@ import csv
 import json
 import boto3
 
-dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
+dynamodb = boto3.resource('dynamodb', region_name='xxx')
 
 table = dynamodb.Table('Movies')
 
