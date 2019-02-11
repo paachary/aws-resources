@@ -1,0 +1,6 @@
+#!/bin/ksh
+export REDSHIFT_HOST=""
+export REDSHIFT_PORT=5439
+export REDSHIFT_DB=""
+export REDSHIFT_UNAME=""
+export PGPASSWORD=""
