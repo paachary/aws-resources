@@ -1,0 +1,26 @@
+{
+    "DBName": "masterdb",
+    "ClusterIdentifier": "samplecluster",
+    "ClusterType": "multi-node",
+    "NodeType": "DC2.Large",
+    "MasterUsername": "",
+    "MasterUserPassword": "",
+    "VpcSecurityGroupIds": [
+        ""
+    ],
+    "ClusterSubnetGroupName": "master-sg",
+    "Port": 5439,
+    "ClusterVersion": "1.0",
+    "AllowVersionUpgrade": true,
+    "NumberOfNodes": 2,
+    "PubliclyAccessible": true,
+    "Tags": [
+        {
+            "Key": "Name",
+            "Value": "sample-cluster"
+        }
+    ],
+    "IamRoles": [
+        ""
+    ]
+}
