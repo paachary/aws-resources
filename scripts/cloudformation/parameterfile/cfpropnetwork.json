@@ -8,7 +8,7 @@
     "ParameterValue": "ap-south-1b"
   },
   {
-    "ParameterKey": "SSHLocation","ParameterValue": "122.178.199.66/32"
+    "ParameterKey": "SSHLocation","ParameterValue": "122.167.88.248/32"
   },
   {
     "ParameterKey": "SubnetSufix",

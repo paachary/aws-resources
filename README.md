@@ -55,3 +55,4 @@ non-default VPC with multiple private and public subnets, including two EC2 inst
                           2. Bastion Server to allow connection to EC2 instances on private subnets
 
 
+### Note : This script requires "jq" package to be installed on your machine before you start executing the scripts
