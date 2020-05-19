@@ -16,6 +16,9 @@ Step5 : Incase of manual debugging, you could create an AWS Glue Endpoint and in
 
 Step6 : Once the changes and implemented and tested, execute the Glue Job using the UI / CLI.
 
+Important point to note is that the Glue Job must have the appropriate permissions to act on the contents of the S3 bucket.
+Hence ensure that role with Read/write/List permissions on the S3 bucket is assigned to the Job.
+
 
 In case of job errors / success, the same will be displayed in the job results window pane.
 
