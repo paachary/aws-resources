@@ -4,12 +4,18 @@ This script executes a scala job which reads from two tables, defined in the Glu
 Detailed steps defined below:
 
 Step1 : Setup Database under Glue
+
 Step2 : Setup the Glue Crawler to scan the input s3 bucket (uploaded u.item, u.data and u.user files from movielens.com). 
         Note: Please ensure that the files do not contain any encoded characters as they cannot be processed by the given Spark compiler.
+
 Step3 : Once tables are discovered by the crawler, review the tables' scehmas.
+
 Step4 : Create a job using Spark with Scala (as this case) and have Glue create a job for you.
+
 Step5 : Incase of manual debugging, you could create an AWS Glue Endpoint and initiate a spark-shell session with the Glue dependencies using the url provided in the endpoint page.
+
 Step6 : Once the changes and implemented and tested, execute the Glue Job using the UI / CLI.
+
 
 In case of job errors / success, the same will be displayed in the job results window pane.
 
