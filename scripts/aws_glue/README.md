@@ -15,3 +15,4 @@ In case of job errors / success, the same will be displayed in the job results w
 
 The provided Scala script fetches data from the movielens data files uploaded into the source s3 bucket.
 The output files are redirected to another folder in the same s3 bucket. The output can be redirected to any of the supported target sinks.
+
