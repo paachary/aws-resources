@@ -3,17 +3,17 @@
 alias BEGINCOMMENT="if [ ]; then"
 alias ENDCOMMENT="fi"
 
-ENV_FILE="$HOME/setenv.ksh"
+ENV_FILE="setenv.ksh"
 
 if [[ -e "$ENV_FILE" ]]
 then
     . ${ENV_FILE}
 else
-    export EC2KEYPAIR="ec2keypair" 
+    export EMRKEYPAIR="emrKeyPair" 
 fi
 
 response=`aws ec2 create-key-pair --key-name ${EC2KEYPAIR}`
-echo $response | jq '.KeyMaterial' | tr -d '"' > $HOME/ec2keypair.pem
+echo $response | jq '.KeyMaterial' | tr -d '"' > $HOME/emrkeypair.pem
 
 ACCOUNT_ID=`aws sts get-caller-identity | jq '.Account' | tr -d '"'`
 echo $ACCOUNT_ID
