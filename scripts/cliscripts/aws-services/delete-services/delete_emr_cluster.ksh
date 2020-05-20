@@ -1,5 +1,14 @@
 #!/bin/ksh
 
+#!/bin/ksh
+
+#Deleting the emr cluster
+echo "Deleting the emr cluster"
+clusterid=`aws emr list-clusters --active  | jq '.Clusters[0].Id' | tr -d '"'`
+
+# TBD code for multiple clusters"
+response=`aws emr terminate-clusters --cluster-ids ${clusterid}`
+
 
 #Remove EMR_EC2_DefaultRole from the instance profile
 echo "Remove EMR_EC2_DefaultRole from the instance profile"
