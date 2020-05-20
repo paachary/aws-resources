@@ -26,7 +26,7 @@ response=`aws emr create-default-roles`
 response=`aws emr create-cluster \
 --name "Spark-Cluster" \
 --release-label emr-5.30.0 \
---ec2-attributes '{"KeyName":"ec2keypair","InstanceProfile":"EMR_EC2_DefaultRole"}' \
+--ec2-attributes '{"KeyName":"${EC2KEYPAIR}","InstanceProfile":"EMR_EC2_DefaultRole"}' \
 --service-role EMR_DefaultRole \
 --enable-debugging \
 --log-uri "s3n://aws-logs-${ACCOUNT_ID}-${REGION}/elasticmapreduce/" \
