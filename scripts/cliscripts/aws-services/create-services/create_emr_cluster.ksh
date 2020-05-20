@@ -12,8 +12,8 @@ else
     export EMRKEYPAIR="emrKeyPair" 
 fi
 
-response=`aws ec2 create-key-pair --key-name ${EC2KEYPAIR}`
-echo $response | jq '.KeyMaterial' | tr -d '"' > $HOME/emrkeypair.pem
+response=`aws ec2 create-key-pair --key-name ${EMRKEYPAIR}`
+echo $response | jq '.KeyMaterial' | tr -d '"' > $HOME/${EMRKEYPAIR}.pem
 
 ACCOUNT_ID=`aws sts get-caller-identity | jq '.Account' | tr -d '"'`
 echo $ACCOUNT_ID
@@ -26,16 +26,11 @@ response=`aws emr create-default-roles`
 response=`aws emr create-cluster \
 --name "Spark-Cluster" \
 --release-label emr-5.30.0 \
---ec2-attributes '{"KeyName":"${EC2KEYPAIR}","InstanceProfile":"EMR_EC2_DefaultRole"}' \
+--ec2-attributes '{"KeyName":"'"${EMRKEYPAIR}"'","InstanceProfile":"EMR_EC2_DefaultRole"}' \
 --service-role EMR_DefaultRole \
 --enable-debugging \
 --log-uri "s3n://aws-logs-${ACCOUNT_ID}-${REGION}/elasticmapreduce/" \
---applications Name=Oozie \
-               Name=Spark \
-               Name=Phoenix \
-               Name=HBase \
-               Name=Hive \
-               Name=Oozie \
+--applications Name=Spark \
                Name=Zeppelin \
 --instance-type m4.large \
 --instance-count 3 \
@@ -46,10 +41,4 @@ cluster_id=`echo $response | jq '.ClusterId' | tr -d '"'`
 
 cluster_state=`aws emr describe-cluster --cluster-id ${cluster_id} | jq '.Cluster.Status.State'`
 
-while [ ${cluster_state} != "Waiting" ]
-do
-    sleep 30
-done
-
-echo "Cluster is successfully provisioned"
-
+echo $cluster_state
