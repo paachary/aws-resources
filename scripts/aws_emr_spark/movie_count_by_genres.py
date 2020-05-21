@@ -13,7 +13,7 @@ def init(source_path, dest_path):
     # Initialize the Spark Session
     spark = SparkSession.\
                 builder.\
-                appName("Top Movie Ratings").\
+                appName("Movie Stats by Movie Genres").\
                 getOrCreate()
 
     # Obtain the spark context
@@ -26,25 +26,30 @@ def init(source_path, dest_path):
     
     # Read the movies file from S3 and convert it into a Dataframe using SparkContext.rdd.toDF
     movies_df = read_movies_file(sc, source_path)
-  
-    # Select the avg ratings of the movies which have been rated more than 10 times, to ignore false ratings
+    
+    # Read the users file from S3 and convert it into a Dataframe using SparkContext.rdd.toDF
+    users_df = read_users_file(sc, source_path)
+    
+    
+    # Construct the movies file into a rating_genres Dataframe using SparkContext.rdd.toDF
+    ratings_genres_df = read_movie_genres(sc, source_path)
+    
+    # Select the count of movies which have been rated more than 10 times, to ignore false ratings
     ratings_with_filter = ratings_df.selectExpr("movie_id as rating_movie_id", "rating").\
-                    groupBy("rating_movie_id").\
-                    agg(count("rating").alias("cnt"), avg("rating").alias("avg_rating")).\
-                    where(" cnt > 10")
+                         groupBy("rating_movie_id").\
+                         agg(count("rating").alias("cnt")).\
+                         where(" cnt > 10")
+                         
     
-    # Frame the join condition to get few attributes from the movies dataframe
-    join_expresession = ratings_with_filter["rating_movie_id"] == movies_df["movie_id"]
+    join_expresession_movie = ratings_with_filter["rating_movie_id"] == ratings_genres_df["movie_id"]
     
-    # the type of condition that we will be using to join movies and ratings on the movie_id attribute
     join_type = "inner"
     
-    # Form the final dataframe which will serve as the output for top movie ratings
-    final_output_df = ratings_with_filter.select("rating_movie_id","avg_rating").\
-        join(movies_df.selectExpr("movie_id", "title"), join_expresession, join_type).\
-        selectExpr("movie_id","title","avg_rating").\
-        drop("rating_movie_id").\
-        orderBy(desc("avg_rating"))
+    # Construct the join between ratings and rating_genres dataframes
+    final_output_df = ratings_with_filter.\
+    join(ratings_genres_df,join_expresession_movie, join_type).\
+    drop("rating_movie_id").groupBy("genre").agg(sum("cnt").alias("movie_count")).\
+    orderBy(desc("movie_count"))
     
     # Generated the output of the final dataframe into a target bucket
     final_output_df.write.json("{0}/output/".format(dest_path))
@@ -56,7 +61,7 @@ def init(source_path, dest_path):
 def usage():
     print("Please pass the appropriate arguments to the program..\n")
     print("\t Usage >> \n")
-    print("\t\t top_movie_ratings <source_path> <dest_path>\n\n")
+    print("\t\t movie_count_by_genres <source_path> <dest_path>\n\n")
     
 
 def main():
