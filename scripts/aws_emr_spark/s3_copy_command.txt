@@ -1,0 +1,1 @@
+aws s3 cp aws_emr_spark/ s3://prax-bucket/scripts/ --recursive --exclude "*.json" --exclude "*.ksh"
