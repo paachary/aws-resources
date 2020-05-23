@@ -6,8 +6,10 @@
 ## Usage:
 ## create-update-stack [options]
 ## options:
-##  -b --bucket-name : s3 bucket name which contains the scripts and input files. [required]
-##  -k --key-name    : emr Key Name needed for connecting to the emr cluster instanes [required]
+##  -b --bucket-name   : s3 bucket name which contains the scripts and input files (name without s3://). [required]
+##  -k --key-name      : emr Key Name needed for connecting to the emr cluster instanes [required]
+##  -n --function-name : lambda function name which will be attached to the s3 bucket. [required]
+##  -t --table-name    : dynamodb table name which will be populated by the lambda function [required]
 ##  -h --help
 
 ##***
@@ -17,8 +19,10 @@ usage()
 {
     echo "usage: create-update-stack [options]
                 options:
-                    -b --bucket-name : s3 bucket name which contains the scripts and input files. [required]
-                    -k --key-name    : emr Key Name needed for connecting to the emr cluster instanes [required]
+                    -b --bucket-name   : s3 bucket name which contains the scripts and input files (name without s3://). [required]
+                    -k --key-name      : emr Key Name needed for connecting to the emr cluster instanes [required]
+                    -n --function-name : lambda function name which will be attached to the s3 bucket. [required]
+                    -t --table-name    : dynamodb table name which will be populated by the lambda function [required]
                     -h --help
     "
 }
@@ -30,7 +34,13 @@ while [ "$1" != "" ]; do
                                  ;;
         -k | --key-name )        shift
                                  EMRKEYPAIR=$1
-                                 ;;                                
+                                 ;;              
+        -n | --function-name )   shift
+                                 FUNCTION_NAME=$1
+                                 ;;
+        -t | --table-name )      shift
+                                 DDB_TABLE_NAME=$1
+                                 ;;                    
         -h | --help )           usage
                                 exit
                                 ;;
@@ -40,7 +50,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-if [ -z ${BUCKET_NAME} ] | [ -z ${EMRKEYPAIR} ]
+if [ -z ${BUCKET_NAME} ] | [ -z ${EMRKEYPAIR} ] | [ -z ${FUNCTION_NAME} ] | [ -z ${DDB_TABLE_NAME} ]
 then
     usage
     exit 1
@@ -52,6 +62,14 @@ BUCKET="s3://${BUCKET_NAME}"
 echo $BUCKET
 echo $EMRKEYPAIR
 echo $PROPERTIES_FILE
+echo ${FUNCTION_NAME} 
+echo ${DDB_TABLE_NAME}
+
+ACCOUNT_ID=`aws sts get-caller-identity | jq '.Account' | tr -d '"'`
+echo $ACCOUNT_ID
+
+REGION=`aws configure list | grep region| awk '{print $2}'`
+echo $REGION
 
 ##***********************
 ## Define the user-defined functions to setup the environment
@@ -131,9 +149,141 @@ copy_contents_2_s3_bucket()
     echo $response
 }
 
+
+create_lambda_role()
+{
+    POLICY_FILE=$HOME/trust_policy.json
+    
+    rm -f $POLICY_FILE
+    
+    cp /home/hadoop/aws-resources/scripts/aws_lambda/trust_policy.json $POLICY_FILE
+    
+    response=`aws iam create-role --role-name lambda-exec --assume-role-policy-document file://$POLICY_FILE`
+    
+    roleArn=`echo $response | jq '.Role.Arn' | tr -d '"'`
+    
+    echo $roleArn
+    
+    sleep 30
+
+}
+
+attach_execution_roles_2_lambda_role()
+{
+    echo "Attaching the BasicExecution for Lambda role"
+    
+    # Attaching the BasicExecution for Lambda
+    response=`aws iam attach-role-policy --role-name lambda-exec \
+    --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole`
+
+    echo $response
+
+     echo "Attaching the Full access on S3 for Lambda role"
+        
+    # Attaching the AmazonS3FullAccess for Lambda
+    response=`aws iam attach-role-policy --role-name lambda-exec \
+    --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess`
+
+    echo $response
+    
+    echo "Attaching the Full access on Dynamodb for Lambda role"
+        
+    # Attaching the AmazonDynamoDBFullAccess for Lambda
+    response=`aws iam attach-role-policy --role-name lambda-exec \
+    --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess`
+
+    echo $response
+}
+
+create_lambda_function()
+{    
+
+    roleArn="arn:aws:iam::${ACCOUNT_ID}:role/lambda-exec"
+    
+    # Zipping the python lamdba code.
+       
+    cp /home/hadoop/aws-resources/scripts/aws_lambda/load_json_from_s3_2_dynamodb.py ${FUNCTION_NAME}.py    
+    
+    rm -f function.zip
+    
+    zip function.zip ${FUNCTION_NAME}.py
+
+    # Creating the lamdba function
+    response=`aws lambda create-function \
+    --function-name ${FUNCTION_NAME} \
+    --zip-file fileb://function.zip \
+    --handler ${FUNCTION_NAME}.lambda_handler \
+    --runtime python3.7 \
+    --environment Variables={DDB_NAME="'"${DDB_TABLE_NAME}"'"} \
+    --role $roleArn`
+
+    lamdaArn=`echo $response | jq '.FunctionArn' | tr -d '"'`
+    
+    echo $lamdaArn
+    
+    echo "Enabling S3 to invoke lambda function"
+    
+    response=`aws lambda add-permission --function-name ${FUNCTION_NAME} --principal s3.amazonaws.com \
+    --statement-id s3invoke --action "lambda:InvokeFunction" \
+    --source-arn arn:aws:s3:::${BUCKET_NAME} \
+    --source-account ${ACCOUNT_ID}`    
+}
+
+attach_lamdba_2_s3()
+{
+    lambdaARN="arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:${FUNCTION_NAME}"
+    
+    echo "Attaching the lambda to S3 event"
+
+   
+    # Attaching the lambda to S3 event
+    
+    CONFIG_FILE=$HOME/lambdaConfigurations.json
+    
+    rm -f $CONFIG_FILE
+    
+    cp /home/hadoop/aws-resources/scripts/aws_lambda/lambdaConfigurationsTemplate.json $CONFIG_FILE
+    
+    sed -i -e 's/LAMBDA_FUNCTION_ARN/"'"${lambdaARN}"'"/' $CONFIG_FILE
+    
+    response=`aws s3api put-bucket-notification-configuration --bucket ${BUCKET_NAME} --notification-configuration file://$CONFIG_FILE`
+}
+    
+
+create_ddb_table()
+{
+    table=$1
+    
+    echo "Creating dynamodb table $table"
+      
+    # Creating the dynamodb table.
+    table=`aws dynamodb create-table --table-name ${table} \
+    --attribute-definitions AttributeName=genre,AttributeType=S \
+    --key-schema AttributeName=genre,KeyType=HASH \
+    --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5`
+
+    tableArn=`echo $table | jq '.TableDescription.TableArn' | tr -d '"'`
+    
+    echo $tableArn
+}
+
 ##***********************
 
 ## Invoking the user defined functions for setting up the environment
+
+echo "Starting invocation of functions"
+
+copy_contents_2_s3_bucket
+
+create_lambda_role
+
+attach_execution_roles_2_lambda_role
+
+create_lambda_function
+
+attach_lamdba_2_s3
+
+create_ddb_table ${DDB_TABLE_NAME}
 
 create_DataPipeLinePropertiesFile_from_Template
 
@@ -144,8 +294,6 @@ fetch_current_aws_region
 fetch_1st_public_subnet_id
 
 update_s3_bucket_name
-
-copy_contents_2_s3_bucket
 
 
 ##***************************
