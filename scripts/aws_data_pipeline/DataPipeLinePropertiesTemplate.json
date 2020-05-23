@@ -1,0 +1,74 @@
+{
+    
+    "objects": 
+    [
+        {
+            "id": "Default",
+            "name": "Default",
+            "pipelineLogUri": "#{myPipelineLogUri}", 
+            "resourceRole": "DataPipelineDefaultResourceRole",
+            "role": "DataPipelineDefaultRole",      
+            "scheduleType": "ONDEMAND",
+            "failureAndRerunMode": "CASCADE"
+        },
+        {
+            "name": "TerminalteAction",
+            "id": "TerminalteAction",
+            "type": "Terminate"
+        },
+        {
+            "name": "SparkCluster",
+            "releaseLabel": "emr-5.30.0",
+            "applications": ["spark", "hadoop"],
+            "id": "SparkCluster",
+            "type": "EmrCluster",
+            "masterInstanceType": "m4.large",
+            "coreInstanceType": "m4.large",
+            "coreInstanceCount": "2",
+            "subnetId": "#{myClusterSubnetId}",
+            "keyPair": "#{myEmrKP}",
+            "region":"#{myClusterRegion}",
+            "terminateAfter": "1 Hour"
+        },
+        {
+            "id" : "SparkEMRActivity",
+            "type" : "EmrActivity",
+            "runsOn" : { "ref" : "SparkCluster" },
+            "step" :[
+                "command-runner.jar,spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,#{myS3ScriptLocation}/common_functions.py,#{myS3ScriptLocation}/movie_count_by_occupation_and_genres.py,#{myS3Bucket}/input/,#{myS3Bucket}/output/movie_count_by_occupation_and_genres/",
+                "command-runner.jar,spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,#{myS3ScriptLocation}/common_functions.py,#{myS3ScriptLocation}/movie_count_by_genres.py,#{myS3Bucket}/input/,#{myS3Bucket}/output/movie_count_by_genres/"
+            ] 
+        },
+        "onFail": {
+        "ref": "TerminalteAction"
+        }
+    ],
+    "parameters": [
+        {
+            "default":"s3://myBucket/scripts",
+            "description": "S3 folder for scripts",
+            "id": "myS3ScriptLocation",
+            "type": "String"
+        },
+        {
+            "default":"s3://myBucket",
+            "description": "Parent S3 folder",
+            "id": "myS3Bucket",
+            "type": "AWS::S3::ObjectKey"
+        },
+        {
+            "default":"emrKeyPair",
+            "description": "Emr Key Pair",
+            "id": "myEmrKP",
+            "type": "String"
+        }
+    ],    
+    "values": {
+        "myClusterRegion": REGION,
+        "myClusterSubnetId": SUBNETID,
+        "myS3Bucket": S3BUCKETNAME,
+        "myPipelineLogUri": "#{myS3Bucket}/log",        
+        "myS3ScriptLocation": "#{myS3Bucket}/scripts",
+        "myEmrKP": EMRKP
+    }
+}
