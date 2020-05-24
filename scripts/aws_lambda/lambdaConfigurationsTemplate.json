@@ -1,7 +1,7 @@
  {
     "LambdaFunctionConfigurations": [
         {            
-            "Id": "S3PutLambdaFunction",
+            "Id": LAMBDA_FUNCTION_ID,
             "LambdaFunctionArn": LAMBDA_FUNCTION_ARN,
             "Events": 
             [
@@ -15,7 +15,7 @@
                     [
                         {
                             "Name": "prefix",
-                            "Value": "output/movie_count_by_genres/output"
+                            "Value": PREFIX_VALUE
                         },
 			{
                             "Name": "suffix",
