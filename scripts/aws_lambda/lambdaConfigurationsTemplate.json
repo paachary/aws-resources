@@ -1,8 +1,8 @@
  {
     "LambdaFunctionConfigurations": [
         {            
-            "Id": LAMBDA_FUNCTION_ID,
-            "LambdaFunctionArn": LAMBDA_FUNCTION_ARN,
+            "Id": LAMBDA_FUNCTION_ID_1,
+            "LambdaFunctionArn": LAMBDA_FUNCTION_ARN_1,
             "Events": 
             [
                 "s3:ObjectCreated:Put"
@@ -15,7 +15,33 @@
                     [
                         {
                             "Name": "prefix",
-                            "Value": PREFIX_VALUE
+                            "Value": PREFIX_VALUE_1
+                        },
+			{
+                            "Name": "suffix",
+                            "Value": ".json"
+			}
+
+                    ]
+                }
+            }
+        },
+        {            
+            "Id": LAMBDA_FUNCTION_ID_2,
+            "LambdaFunctionArn": LAMBDA_FUNCTION_ARN_2,
+            "Events": 
+            [
+                "s3:ObjectCreated:Put"
+            ],
+            "Filter": 
+            {
+                "Key": 
+                {
+                    "FilterRules": 
+                    [
+                        {
+                            "Name": "prefix",
+                            "Value": PREFIX_VALUE_2
                         },
 			{
                             "Name": "suffix",
@@ -26,5 +52,6 @@
                 }
             }
         }
+        
     ]
 }

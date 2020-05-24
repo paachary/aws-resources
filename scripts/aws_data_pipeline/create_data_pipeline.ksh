@@ -268,14 +268,19 @@ create_lambda_function()
     --principal s3.amazonaws.com \
     --statement-id s3invoke --action "lambda:InvokeFunction" \
     --source-arn arn:aws:s3:::${BUCKET_NAME} \
-    --source-account ${ACCOUNT_ID}`    
+    --source-account ${ACCOUNT_ID}`
 }
 
 attach_lamdba_func_2_s3()
 {
-    lambdaARN=$1
-    PREFIX_VALUE=$2
-    FUNCTION_NAME=$3
+    lambdaARN_1=$1
+    PREFIX_VALUE_1=$2
+    FUNCTION_NAME_1=$3
+
+    lambdaARN_2=$4
+    PREFIX_VALUE_2=$5
+    FUNCTION_NAME_2=$6
+
     
     echo "Attaching the lambda to S3 event"
 
@@ -287,14 +292,19 @@ attach_lamdba_func_2_s3()
     
     cp /home/hadoop/aws-resources/scripts/aws_lambda/lambdaConfigurationsTemplate.json $CONFIG_FILE
     
-    sed -i -e 's/LAMBDA_FUNCTION_ID/"'"${FUNCTION_NAME}"'"/' $CONFIG_FILE
+    sed -i -e 's/LAMBDA_FUNCTION_ID_1/"'"${FUNCTION_NAME_1}"'"/' $CONFIG_FILE
     
-    sed -i -e 's/PREFIX_VALUE/"'"${PREFIX_VALUE}"'"/' $CONFIG_FILE
+    sed -i -e 's/PREFIX_VALUE_1/"'"${PREFIX_VALUE_1}"'"/' $CONFIG_FILE
 
-    sed -i -e 's/LAMBDA_FUNCTION_ARN/"'"${lambdaARN}"'"/' $CONFIG_FILE
+    sed -i -e 's/LAMBDA_FUNCTION_ARN_1/"'"${lambdaARN_1}"'"/' $CONFIG_FILE
+    
+    sed -i -e 's/LAMBDA_FUNCTION_ID_2/"'"${FUNCTION_NAME_2}"'"/' $CONFIG_FILE
+    
+    sed -i -e 's/PREFIX_VALUE_2/"'"${PREFIX_VALUE_2}"'"/' $CONFIG_FILE
+
+    sed -i -e 's/LAMBDA_FUNCTION_ARN_2/"'"${lambdaARN_2}"'"/' $CONFIG_FILE
     
     response=`aws s3api put-bucket-notification-configuration --bucket ${BUCKET_NAME} --notification-configuration file://$CONFIG_FILE`
-    sleep 10
 }
 
 create_ddb_table_1()
@@ -323,7 +333,8 @@ create_ddb_table_2()
     # Creating the dynamodb table.
     table=`aws dynamodb create-table --table-name ${table} \
     --attribute-definitions AttributeName=occupation,AttributeType=S AttributeName=genre,AttributeType=S \
-    --key-schema AttributeName=occupation,KeyType=HASH AttributeName=genre,KeyType=RANGE\
+    --key-schema AttributeName=occupation,KeyType=HASH AttributeName=genre,KeyType=RANGE \
+    --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES \
     --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5`
 
     tableArn=`echo $table | jq '.TableDescription.TableArn' | tr -d '"'`
@@ -347,9 +358,12 @@ create_lambda_function ${MOVIE_GENRE_FUNC} ${DDB_GENRE_TABLE_NAME}
 
 create_lambda_function ${OCCUP_MOVIE_GENRE_FUNC} ${DDB_OCCP_GENRE_TABLE_NAME}
 
-attach_lamdba_func_2_s3 "arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:${MOVIE_GENRE_FUNC}" "output\\/movie_count_by_genres\\/output" ${MOVIE_GENRE_FUNC}
-
-attach_lamdba_func_2_s3 "arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:${OCCUP_MOVIE_GENRE_FUNC}" "output\\/movie_count_by_occupation_and_genres\\/output" ${OCCUP_MOVIE_GENRE_FUNC}
+attach_lamdba_func_2_s3 "arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:${OCCUP_MOVIE_GENRE_FUNC}" \
+"output\\/movie_count_by_occupation_and_genres\\/output" \
+${OCCUP_MOVIE_GENRE_FUNC} \
+"arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:${MOVIE_GENRE_FUNC}" \
+"output\\/movie_count_by_genres\\/output" \
+${MOVIE_GENRE_FUNC}
 
 create_ddb_table_1 ${DDB_GENRE_TABLE_NAME}
 
