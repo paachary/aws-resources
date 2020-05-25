@@ -16,7 +16,7 @@
 
 usage()
 {
-    echo "usage: create-update-stack [options]
+    echo "usage: create_ddb_stream_lambda.sh [options]
  options:
 -d --es-domain-name         :elasticsearch domain name [Required] [The name must start with a lowercase letter and must be between 3 and 28 characters. Valid characters are a-z (lowercase only), 0-9, and - (hyphen).]
 -n --function-name          :lambda function name which will be attached to dynamodb stream. [Optional] [Default=es_lambda_function]
@@ -61,7 +61,8 @@ then
     DDB_TABLE_NAME="occupation_movies_genres"
 fi
 
-echo ${LAMDBA_FUNCTION} 
+echo ${LAMDBA_FUNCTION}
+
 echo ${DDB_TABLE_NAME} 
 
 ACCOUNT_ID=`aws sts get-caller-identity | jq '.Account' | tr -d '"'`
@@ -85,9 +86,6 @@ create_lambda_role()
     roleArn=`echo $response | jq '.Role.Arn' | tr -d '"'`
     
     echo $roleArn
-    
-    sleep 30
-
 }
 
 assign_role_policy()
@@ -104,7 +102,6 @@ assign_role_policy()
     echo $streamTS
     
     ddbStreamArn="arn:aws:dynamodb:$REGION:$ACCOUNT_ID:table\\/$DDB_TABLE_NAME\\/stream\\/$streamTS\\/*"
-    echo $ddbStreamArn
     
     lambdaArn="arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:${LAMDBA_FUNCTION}"
     
@@ -146,44 +143,32 @@ attach_execution_roles_2_lambda_role()
     echo $response
 }
 
-
-create_es_domain()
+create_lambda_function()
 {
-    IAM_ROOT_ARN="arn:aws:iam::${ACCOUNT_ID}:root"
-    ES_DOMAIN_ARN="arn:aws:es:${REGION}:${ACCOUNT_ID}:domain/${ES_DOMAIN_NAME}/*"
-
- 
-    response=`aws es create-elasticsearch-domain --domain-name ${ES_DOMAIN_NAME} \
-    --elasticsearch-version 7.4 \
-    --elasticsearch-cluster-config InstanceType=t2.small.elasticsearch,InstanceCount=1 \
-    --ebs-options EBSEnabled=true,VolumeType=gp2,VolumeSize=10 \
-    --access-policies \
-    '{"Version": "2012-10-17", "Statement":[ { "Effect": "Allow", "Principal": {"AWS": "'"${IAM_ROOT_ARN}"'" },"Action":"es:*","Resource": "'"${ES_DOMAIN_ARN}"'" } ] }'`
-    
-    echo "Please wait while domain is being created and loaded. This may take about 10 minutes."
+    echo "Creating lambda function"
     
     response=`aws es describe-elasticsearch-domain --domain-name ${ES_DOMAIN_NAME}`
-    
-    status=`echo $response | jq '.DomainStatus.Processing'`    
+    echo $response
+    status=`echo $response | jq '.DomainStatus.Processing'`
+    echo $status
+    if [ "$status" == true  ]
+    then
+        echo "Please wait while ElasticSearch Domain is being created and loaded. This may take about 10 minutes."
+    fi
 
     while [ "$status" != false ]
     do
         sleep 60
         status=`aws es describe-elasticsearch-domain --domain-name ${ES_DOMAIN_NAME} | jq '.DomainStatus.Processing' | tr -d '"'`
-        if [ "$status" == true  ]
+        if [ "$status" == false  ]
         then
             break
         fi
     done
-    
-    domainEndPoint=`aws es describe-elasticsearch-domain --domain-name ${ES_DOMAIN_NAME} | jq '.DomainStatus.Endpoint' | tr -d '"'`
-    echo $domainEndPoint
-}
 
-create_lambda_function()
-{    
-    ES_END_POINT=$1
-    echo "ES Domain Name = $ES_END_POINT"
+    ES_END_POINT=`aws es describe-elasticsearch-domain --domain-name ${ES_DOMAIN_NAME} | jq '.DomainStatus.Endpoint' | tr -d '"'`
+
+    echo "ES Domain End Point = $ES_END_POINT"
     
     echo "Lambda Function name - $LAMDBA_FUNCTION"
     
@@ -240,8 +225,5 @@ assign_role_policy
 
 attach_execution_roles_2_lambda_role
 
-create_es_domain
+create_lambda_function
 
-esEndPoint=(create_es_domain)
-
-create_lambda_function $esEndPoint

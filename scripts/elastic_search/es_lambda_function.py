@@ -1,3 +1,4 @@
+import os
 import json
 import boto3
 import time
@@ -10,7 +11,18 @@ sts = boto3.client('sts')
 
 ES_URL = os.environ["ES_URL"]
 
-credentials = boto3.Session().get_credentials()
+my_session = boto3.session.Session()
+
+credentials = my_session.get_credentials()
+region = my_session.region_name
+
+awsauth = AWS4Auth(
+    credentials.access_key,
+    credentials.secret_key, 
+    region,
+    'es',
+    session_token=credentials.token
+)
 
 es_client = Elasticsearch(
     hosts=[{'host': ES_URL, 'port': 443}], 

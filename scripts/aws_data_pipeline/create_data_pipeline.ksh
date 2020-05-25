@@ -8,6 +8,7 @@
 ## options:
 ## -b --bucket-name            :s3 bucket name which contains the scripts and input files (name without s3://). [required]
 ## -k --key-name               :emr Key Name needed for connecting to the emr cluster instanes [required]
+## -d --es_domain_name         :elasticsearch domain name [Required] [The name must start with a lowercase letter and must be between 3 and 28 characters. Valid characters are a-z (lowercase only), 0-9, and - (hyphen).]
 ## -n --function-name-1        :lambda function name which will be attached to s3 bucket. [Optional] [Default=movie_genre_func]
 ## -f --function-name-2        :lambda function name which will be attached to s3 bucket. [Optional] [Default=occupation_movie_genre_func]
 ## -g --genre-table-name       :dynamodb genre table name which will be populated by the lambda function [Optional] [Default=movies_genres]
@@ -19,14 +20,22 @@
 
 usage()
 {
-    echo "usage: create-update-stack [options]
+    echo "usage: create_data_pipeline.ksh [options]
  options:
--b --bucket-name            :s3 bucket name which contains the scripts and input files (name without s3://). [required]
--k --key-name               :emr Key Name needed for connecting to the emr cluster instanes [required]
+-b --bucket-name            :s3 bucket name which contains the scripts and input files (name without s3://). [Required]
+
+-k --key-name               :emr Key Name needed for connecting to the emr cluster instanes [Required]
+
+-d --es_domain_name         :elasticsearch domain name [Required] [The name must start with a lowercase letter and must be between 3 and 28 characters. Valid characters are a-z (lowercase only), 0-9, and - (hyphen).]
+
 -n --function-name-1        :lambda function name which will be attached to s3 bucket. [Optional] [Default=movie_genre_func]
+
 -f --function-name-2        :lambda function name which will be attached to s3 bucket. [Optional] [Default=occupation_movie_genre_func]
+
 -g --genre-table-name       :dynamodb genre table name which will be populated by the lambda function [Optional] [Default=movies_genres]
+
 -o --occup_genre-table-name :dynamodb occupation genre table name which will be populated by the lambda function [Optional] [Default=occupation_movies_genres]
+
 -h --help
     "
 }
@@ -38,7 +47,10 @@ while [ "$1" != "" ]; do
                                        ;;
         -k | --key-name )              shift
                                        EMRKEYPAIR=$1
-                                       ;;              
+                                       ;;
+        -d | --es-domain-name )        shift
+                                       ES_DOMAIN_NAME=$1
+                                       ;;
         -n | --function-name-1 )       shift
                                        MOVIE_GENRE_FUNC=$1
                                        ;;
@@ -59,6 +71,12 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+
+if [ -z ${ES_DOMAIN_NAME} ]
+then
+    usage
+    exit 1
+fi
 
 if [ -z ${BUCKET_NAME} ]
 then
@@ -95,8 +113,9 @@ fi
 PROPERTIES_FILE="$HOME/DataPipeLineProperties.json"
 BUCKET="s3://${BUCKET_NAME}"
 
-echo $BUCKET
-echo $EMRKEYPAIR
+echo ${BUCKET}
+echo ${EMRKEYPAIR}
+echo ${ES_DOMAIN_NAME}
 echo $PROPERTIES_FILE
 echo ${MOVIE_GENRE_FUNC} 
 echo ${OCCUP_MOVIE_GENRE_FUNC} 
@@ -104,10 +123,10 @@ echo ${DDB_GENRE_TABLE_NAME}
 echo ${DDB_OCCP_GENRE_TABLE_NAME}
 
 ACCOUNT_ID=`aws sts get-caller-identity | jq '.Account' | tr -d '"'`
-echo $ACCOUNT_ID
+echo ${ACCOUNT_ID}
 
 REGION=`aws configure list | grep region| awk '{print $2}'`
-echo $REGION
+echo ${REGION}
 sleep 30
 
 ##***********************
@@ -348,8 +367,18 @@ create_ddb_table_2()
 
 echo "Starting invocation of functions"
 
+# Submitting the request to create ElasticSearch Domain asynchronously
+echo "Submitting the request to create ElasticSearch Domain ${ES_DOMAIN_NAME} asynchronously"
+/home/hadoop/aws-resources/scripts/elastic_search/create_es_domain.ksh $ES_DOMAIN_NAME $ACCOUNT_ID $REGION &
+
+# The ES Domain creation takes about 10 minutes. Hence sleeping for 10 mins before starting the project
+echo "The ES Domain creation takes about 10 minutes. Hence sleeping for 10 mins before starting the pipeline."
+sleep 600
+
+#
 copy_contents_2_s3_bucket
 
+# Creating lambda role for S3.
 create_lambda_role
 
 attach_execution_roles_2_lambda_role
@@ -413,5 +442,8 @@ echo $response
 
 # List the pipelines
 response=`aws datapipeline list-pipelines`
+
+# Invoking the lambda for ddb stream creation
+/home/hadoop/aws-resources/scripts/aws_dynamodb/streams/create_ddb_stream_lambda.sh -d $ES_DOMAIN_NAME -n es_lambda_function -g ${DDB_OCCP_GENRE_TABLE_NAME}
 
 ##**************************************
