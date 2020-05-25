@@ -4,7 +4,7 @@
 ## passed to the script
 ## Author : Prashant Acharya
 ## Usage:
-## create-update-stack [options]
+## create_data_pipeline.ksh [options]
 ## options:
 ## -b --bucket-name            :s3 bucket name which contains the scripts and input files (name without s3://). [required]
 ## -k --key-name               :emr Key Name needed for connecting to the emr cluster instanes [required]
