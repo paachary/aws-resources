@@ -1,3 +1,0 @@
-aws s3 cp aws_emr_spark/ s3://prax-bucket/scripts/ --recursive --exclude "*.json" --exclude "*.ksh"
-
-aws s3 cp /home/hadoop/dataset/ml-100kdata/ s3://prax-bucket/input/ --recursive

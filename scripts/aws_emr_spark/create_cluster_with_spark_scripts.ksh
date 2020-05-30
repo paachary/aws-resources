@@ -55,46 +55,8 @@ response=`aws emr create-cluster \
     --configurations '[{"Classification":"spark","Properties":{}}]' \
     --scale-down-behavior TERMINATE_AT_TASK_COMPLETION \
     --region ${REGION} \
-    --steps Type=CUSTOM_JAR,\
-    Name=Spark,\
-    ActionOnFailure=CONTINUE,\
-    Jar=command-runner.jar,\
-    Args=[spark-submit,\
-    --deploy-mode,\
-    cluster,\
-    --conf,spark.driver.memoryOverhead=512,\
-    --conf,spark.executor.memoryOverhead=512,\
-    --py-files,s3://prax-bucket/scripts/common_functions.py,\
-    s3://prax-bucket/scripts/movie_count_by_occupation_and_genres.py,\
-    s3://prax-bucket/input/,s3://prax-bucket/output/movie_count_by_occupation_and_genres/] \
-    Type=CUSTOM_JAR,\
-    Name=Spark,ActionOnFailure=CONTINUE,\
-    Jar=command-runner.jar,\
-    Args=[spark-submit,\
-    --deploy-mode,\
-    cluster,\
-    --conf,spark.driver.memoryOverhead=512,\
-    --conf,spark.executor.memoryOverhead=512,\
-    --py-files,s3://prax-bucket/scripts/common_functions.py,\
-    s3://prax-bucket/scripts/movie_count_by_genres.py,\
-    s3://prax-bucket/input/,\
-    s3://prax-bucket/output/movie_count_by_genres/] \
-    Type=CUSTOM_JAR,\
-    Name=Spark,\
-    ActionOnFailure=CONTINUE,\
-    Jar=command-runner.jar,\
-    Args=[spark-submit,\
-    --deploy-mode,\
-    cluster,\
-    --conf,spark.driver.memoryOverhead=512,\
-    --conf,spark.executor.memoryOverhead=512,--py-files,\
-    s3://prax-bucket/scripts/common_functions.py,\
-    s3://prax-bucket/scripts/top_movie_ratings.py,\
-    s3://prax-bucket/input/,\
-    s3://prax-bucket/output/top_movie_ratings/]`
-
-
-cluster_id=`echo $response | jq '.ClusterId' | tr -d '"'`
+    --steps Type=CUSTOM_JAR,Name=Spark,ActionOnFailure=CONTINUE,Jar=command-runner.jar,Args=[spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,s3://prax-bucket/scripts/common_functions.py,s3://prax-bucket/scripts/movie_count_by_occupation_and_genres.py,s3://prax-bucket/input/,s3://prax-bucket/output/movie_count_by_occupation_and_genres/] Type=CUSTOM_JAR,Name=Spark,ActionOnFailure=CONTINUE,Jar=command-runner.jar,Args=[spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,s3://prax-bucket/scripts/common_functions.py,s3://prax-bucket/scripts/movie_count_by_genres.py,s3://prax-bucket/input/,s3://prax-bucket/output/movie_count_by_genres/] Type=CUSTOM_JAR,Name=Spark,ActionOnFailure=CONTINUE,Jar=command-runner.jar,Args=[spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,s3://prax-bucket/scripts/common_functions.py,s3://prax-bucket/scripts/top_movie_ratings.py,s3://prax-bucket/input/,s3://prax-bucket/output/top_movie_ratings/] Type=CUSTOM_JAR,Name=Spark,ActionOnFailure=CONTINUE,Jar=command-runner.jar,Args=[spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--class,MovieDataSet,s3://prax-bucket/jar/moviedataset.jar,s3://prax-bucket/input/,s3://prax-bucket/output/moviedataset/]` 
+                     cluster_id=`echo $response | jq '.ClusterId' | tr -d '"'`
 
 cluster_state=`aws emr describe-cluster --cluster-id ${cluster_id} | jq '.Cluster.Status.State'`
 

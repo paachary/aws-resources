@@ -110,7 +110,7 @@ then
     DDB_OCCP_GENRE_TABLE_NAME="occupation_movies_genres"
 fi
 
-PROPERTIES_FILE="$HOME/DataPipeLineProperties.json"
+PROPERTIES_FILE="/tmp/DataPipeLineProperties.json"
 BUCKET="s3://${BUCKET_NAME}"
 
 echo ${BUCKET}
@@ -145,9 +145,9 @@ create_DataPipeLinePropertiesFile_from_Template()
 
 create_ec2_keyPair()
 {
-    if test -f "$HOME/${EMRKEYPAIR}.pem"; then
-        echo "$HOME/${EMRKEYPAIR}.pem file exists. Deleting..."
-        rm -f "$HOME/${EMRKEYPAIR}.pem"
+    if test -f "/tmp/${EMRKEYPAIR}.pem"; then
+        echo "/tmp/${EMRKEYPAIR}.pem file exists. Deleting..."
+        rm -f "/tmp/${EMRKEYPAIR}.pem"
     fi
     
     response=`aws ec2 delete-key-pair --key-name ${EMRKEYPAIR}`
@@ -156,7 +156,7 @@ create_ec2_keyPair()
 
     keypair=`aws ec2 create-key-pair --key-name ${EMRKEYPAIR}`
 
-    echo $keypair | jq '.KeyMaterial' | tr -d '"' > $HOME/${EMRKEYPAIR}.pem
+    echo $keypair | jq '.KeyMaterial' | tr -d '"' > /tmp/${EMRKEYPAIR}.pem
 
     # Replacing keypair with valid keypair
     sed -i -e 's/EMRKP/"'"${EMRKEYPAIR}"'"/' $PROPERTIES_FILE
@@ -200,17 +200,19 @@ copy_contents_2_s3_bucket()
     response=`aws s3 mb ${BUCKET}`
     echo $response
     
-    response=`aws s3 cp /home/hadoop/aws-resources/scripts/aws_emr_spark/ ${BUCKET}/scripts/ --recursive --exclude "*.json" --exclude "*.ksh" --exclude "*.txt"`
+    response=`aws s3 cp /home/hadoop/aws-resources/scripts/aws_emr_spark/pyspark/ ${BUCKET}/scripts/ --recursive --exclude "*.json" --exclude "*.ksh" --exclude "*.txt"`
     echo $response
     
+    response=`aws s3 cp /home/hadoop/aws-resources/scripts/aws_emr_spark/scala/MovieLensUserPreferedMovies/moviedataset.jar ${BUCKET}/jar/`
+    echo $response
+
     response=`aws s3 cp /home/hadoop/dataset/ml-100k/data/ ${BUCKET}/input/ --recursive`
     echo $response
 }
 
-
 create_lambda_role()
 {
-    POLICY_FILE=$HOME/trust_policy.json
+    POLICY_FILE=/tmp/trust_policy.json
     
     rm -f $POLICY_FILE
     
@@ -288,6 +290,8 @@ create_lambda_function()
     --statement-id s3invoke --action "lambda:InvokeFunction" \
     --source-arn arn:aws:s3:::${BUCKET_NAME} \
     --source-account ${ACCOUNT_ID}`
+
+    rm -fr function.zip
 }
 
 attach_lamdba_func_2_s3()
@@ -305,7 +309,7 @@ attach_lamdba_func_2_s3()
 
     # Attaching the lambda to S3 event
     
-    CONFIG_FILE=$HOME/lambdaConfigurations.json
+    CONFIG_FILE=/tmp/lambdaConfigurations.json
     
     rm -f $CONFIG_FILE
     

@@ -30,8 +30,9 @@
             "type" : "EmrActivity",
             "runsOn" : { "ref" : "SparkCluster" },
             "step" :[
-                "command-runner.jar,spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,#{myS3ScriptLocation}/common_functions.py,#{myS3ScriptLocation}/movie_count_by_occupation_and_genres.py,#{myS3Bucket}/input/,#{myS3Bucket}/output/movie_count_by_occupation_and_genres/",
-                "command-runner.jar,spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,#{myS3ScriptLocation}/common_functions.py,#{myS3ScriptLocation}/movie_count_by_genres.py,#{myS3Bucket}/input/,#{myS3Bucket}/output/movie_count_by_genres/"
+         "command-runner.jar,spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,#{myS3ScriptLocation}/common_functions.py,#{myS3ScriptLocation}/movie_count_by_occupation_and_genres.py,#{myS3Bucket}/input/,#{myS3Bucket}/output/movie_count_by_occupation_and_genres/",
+        "command-runner.jar,spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--py-files,#{myS3ScriptLocation}/common_functions.py,#{myS3ScriptLocation}/movie_count_by_genres.py,#{myS3Bucket}/input/,#{myS3Bucket}/output/movie_count_by_genres/",
+        "command-runner.jar,spark-submit,--deploy-mode,cluster,--conf,spark.driver.memoryOverhead=512,--conf,spark.executor.memoryOverhead=512,--class,MovieDataSet,#{myS3Bucket}/jar/moviedataset.jar,#{myS3Bucket}/input/,#{myS3Bucket}/output/moviedataset/"
             ]
         }
     ],

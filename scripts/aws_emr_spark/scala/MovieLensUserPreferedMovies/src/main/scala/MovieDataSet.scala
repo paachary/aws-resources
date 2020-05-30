@@ -165,7 +165,8 @@ object MovieDataSet {
       val onlyRatedMovieGT10 = movieDataSet.getOnlyRatedMoviesGT10(spark, ratingsDF)
       val movieDataFrame = movieDataSet.getUserPreferencesDataFrame(moviesDF,moviesGenreDF,
         usersDF, onlyRatedMovieGT10)
-      movieDataFrame.write.parquet(outputDir)
+      movieDataFrame.write.parquet(outputDir+"/parquet")
+      movieDataFrame.write.json(outputDir+"/json")
       spark.close()
     }
   }
