@@ -54,6 +54,6 @@ EOF
 ## Using the decrypted datakey, decrypt the message.
 openssl pkeyutl -decrypt \
     -inkey private.key \
-    -in ./input.txt.encrypted \
-    -out ./input.txt.decrypted
+    -in ./message.enc \
+    -out ./message.decr
 
