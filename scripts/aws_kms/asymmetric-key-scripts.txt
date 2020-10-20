@@ -1,0 +1,59 @@
+# Secret Message
+echo "Hello World" > message
+
+# Creating an asymmetric key in the AWS KMS to encrypt and decrypt the secret message
+KEYID=`aws kms create-key --key-usage ENCRYPT_DECRYPT --customer-master-key-spec RSA_2048 | tee /dev/stderr | jq -r '.KeyMetadata.KeyId'`
+
+# Encrypting the secret message using the asymmetric key created in the KMS in the earlier step
+aws kms encrypt --key-id ${KEYID} --encryption-algorithm RSAES_OAEP_SHA_256 --plaintext fileb://message | tee /dev/stderr | jq -r '.CiphertextBlob' | base64 --decode > ciphertext
+
+# Decrypting the cipher message contained the encrypted secret message using the asymmetric key created in the KMS in the earlier step
+aws kms decrypt --key-id ${KEYID} --encryption-algorithm RSAES_OAEP_SHA_256 --ciphertext fileb://ciphertext | tee /dev/stderr | jq -r '.Plaintext' | base64 --decode
+
+### Data KeyPair (applies only to symmetric key)
+
+# Creating a symmetric key in the AWS KMS to encypt and decrypt the datakey
+# customer-master-key-spec: "SYMMETRIC_DEFAULT"
+# EncryptionAlgorithms: SYMMETRIC_DEFAULT"
+
+KEYID=`aws kms create-key | tee /dev/stderr | jq -r '.KeyMetadata.KeyId'`
+
+## Generate the datakey using the keyid created above with the key-pair-spec RSA_2048
+## Generates the public key, private key in plain text and private key ciphertextBlob
+aws kms generate-data-key-pair --key-id $KEYID --key-pair-spec RSA_2048
+
+
+
+## Generate the datakey using the keyid created above with the key-pair-spec RSA_2048
+## Generates the public key and private key ciphertextBlob without private key without plaintext
+aws kms generate-data-key-pair-without-plaintext --key-id $KEYID --key-pair-spec RSA_2048 | tee /dev/stderr > keypair.json
+
+## Extract the publickey from keypair.json
+cat << EOF > public.key
+-----BEGIN PUBLIC KEY-----
+$(jq -r '.PublicKey' keypair.json | fold -w60)
+-----END PUBLIC KEY-----
+EOF
+
+## Encrypt the secret message outside of KMS using openssl
+openssl pkeyutl -encrypt -pubin \
+-inkey public.key \
+-in ./message \
+-out ./message.enc
+
+## Recover the private key from the datakey
+cat << EOF > private.key
+-----BEGIN PRIVATE KEY-----
+$(aws kms decrypt \
+  --ciphertext-blob fileb://<(jq -r '.PrivateKeyCiphertextBlob' keypair.json | base64 --decode) \
+  --output text \
+  --query Plaintext | fold -w60)
+-----END PRIVATE KEY-----
+EOF
+
+## Using the decrypted datakey, decrypt the message.
+openssl pkeyutl -decrypt \
+    -inkey private.key \
+    -in ./input.txt.encrypted \
+    -out ./input.txt.decrypted
+
