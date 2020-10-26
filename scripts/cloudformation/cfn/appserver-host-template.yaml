@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: "2010-09-09"
+    
+Description:
+    A template which creates an ec2 machine in a private subnet
+
+Parameters:
+    KeyName:
+        Type: AWS::EC2::KeyPair::KeyName
+        Description: "Name of an existing SSH Keypair to access the instance"
+        Default: a4lkeypair        
+
+    InstanceAmiId:
+        Description: An ec2 instance AMI id
+        Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+        Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'        
+
+    InstanceType:
+        Type: String
+        Description: The instance type for the ec2 host
+        Default: "t2.micro"
+    
+Resources:
+    A4lApplicationServer:
+        Type: AWS::EC2::Instance
+        Properties:
+            AvailabilityZone: !Select [0, !GetAZs '']
+            ImageId: !Ref InstanceAmiId
+            InstanceType: !Ref InstanceType
+            KeyName: !Ref KeyName
+            SecurityGroupIds: 
+                - !Ref EC2SecurityGroup
+            SourceDestCheck: false
+            SubnetId: !ImportValue a4l-vpc-subnet-appa
+            Tags: 
+                - Key: Name
+                  Value: A4L-AppServer-Host
+
+    EC2SecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+            GroupDescription: 'Enable SSH, TCP ports 80 and 443 for connecting to and fro bastion hosts'
+            SecurityGroupEgress:   
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for ssh'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for http'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80   
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for https'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443                   
+            SecurityGroupIngress:  
+                - SourceSecurityGroupId: !ImportValue a4l-bastion-sg
+                  Description: 'Allowing ssh from bastion-host ip'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22 
+                - SourceSecurityGroupId: !ImportValue a4l-bastion-sg
+                  Description: 'Allowing http from bastion-host ip'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - SourceSecurityGroupId: !ImportValue a4l-bastion-sg
+                  Description: 'Allowing https from bastion-host ip'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443  
+            Tags: 
+                - Key: Name
+                  Value: A4L-Application-Security-Group
+            VpcId: !ImportValue a4l-vpc        
+
+Outputs:
+    A4lApplicationServer:
+        Description: A reference to the created VPC        
+        Value: !Ref A4lApplicationServer
+        Export:
+            Name: a4l-application-server
+
+    EC2SecurityGroup:
+        Description: A reference to the created VPC        
+        Value: !Ref EC2SecurityGroup
+        Export:
+            Name: a4l-application-server-sg
