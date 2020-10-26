@@ -117,7 +117,26 @@ Resources:
             RouteTableId: !Ref VpcRouteTable  
             SubnetId: !ImportValue a4l-vpc-subnet-appc
 
+    SubnetRoute4TableAssoc:
+      DependsOn: VpcRouteTable
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTable  
+          SubnetId: !ImportValue a4l-vpc-subnet-dba
+      
+    SubnetRoute5TableAssoc:
+      DependsOn: VpcRouteTable
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTable  
+          SubnetId: !ImportValue a4l-vpc-subnet-dbb
 
+    SubnetRoute6TableAssoc:
+      DependsOn: VpcRouteTable
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTable  
+          SubnetId: !ImportValue a4l-vpc-subnet-dbc
 Outputs:
     A4lBastionServer:
         Description: A reference to the created Bastion Host
