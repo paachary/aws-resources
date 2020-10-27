@@ -56,17 +56,17 @@ Resources:
                   IpProtocol: tcp
                   ToPort: 443                   
             SecurityGroupIngress:  
-                - SourceSecurityGroupId: !ImportValue a4l-bastion-sg
+                - SourceSecurityGroupId: !ImportValue a4l-public-sg-A
                   Description: 'Allowing ssh from bastion-host ip'
                   FromPort: 22
                   IpProtocol: tcp
                   ToPort: 22 
-                - SourceSecurityGroupId: !ImportValue a4l-bastion-sg
+                - SourceSecurityGroupId: !ImportValue a4l-public-sg-A
                   Description: 'Allowing http from bastion-host ip'
                   FromPort: 80
                   IpProtocol: tcp
                   ToPort: 80  
-                - SourceSecurityGroupId: !ImportValue a4l-bastion-sg
+                - SourceSecurityGroupId: !ImportValue a4l-public-sg-A
                   Description: 'Allowing https from bastion-host ip'
                   FromPort: 443
                   IpProtocol: tcp

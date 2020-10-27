@@ -1,0 +1,406 @@
+AWSTemplateFormatVersion: "2010-09-09"
+    
+Description:
+    The template creates three bastion hosts, one in each public subnet of each AZ.
+    Along with the bastion hosts, this template also creates three routes tables, one in each AZ to handle which associate
+    the private subnets in each AZ.
+
+Parameters:
+    KeyName:
+        Type: AWS::EC2::KeyPair::KeyName
+        Description: "Name of an existing SSH Keypair to access the instance"
+        Default: a4lkeypair
+
+    NatInstanceAmiId:
+        Type: String
+        Description: NAT instance AMI id for the bastion host
+        Default: ami-01ef31f9f39c5aaed
+
+    InstanceType:
+        Type: String
+        Description: The instance type for the bastion host
+        Default: "t2.micro"
+
+Resources:
+    A4lBastionServerA:
+        Type: AWS::EC2::Instance
+        DependsOn: BastionSecurityGroupA
+        Properties:
+            AvailabilityZone: !Select [0, !GetAZs '']
+            ImageId: !Ref NatInstanceAmiId
+            InstanceType: !Ref InstanceType
+            KeyName: !Ref KeyName
+            SecurityGroupIds: 
+              - !Ref BastionSecurityGroupA
+            SourceDestCheck: false
+            SubnetId: !ImportValue a4l-vpc-subnet-weba
+            Tags: 
+              - Key: Name
+                Value: A4L-Bastion-Host-A
+
+    A4lBastionServerB:
+        Type: AWS::EC2::Instance
+        DependsOn: BastionSecurityGroupB
+        Properties:
+            AvailabilityZone: !Select [1, !GetAZs '']
+            ImageId: !Ref NatInstanceAmiId
+            InstanceType: !Ref InstanceType
+            KeyName: !Ref KeyName
+            SecurityGroupIds: 
+              - !Ref BastionSecurityGroupB
+            SourceDestCheck: false
+            SubnetId: !ImportValue a4l-vpc-subnet-webb
+            Tags: 
+              - Key: Name
+                Value: A4L-Bastion-Host-B
+       
+    A4lBastionServerC:
+        Type: AWS::EC2::Instance
+        DependsOn: BastionSecurityGroupC
+        Properties:
+            AvailabilityZone: !Select [2, !GetAZs '']
+            ImageId: !Ref NatInstanceAmiId
+            InstanceType: !Ref InstanceType
+            KeyName: !Ref KeyName
+            SecurityGroupIds: 
+              - !Ref BastionSecurityGroupC
+            SourceDestCheck: false
+            SubnetId: !ImportValue a4l-vpc-subnet-webc
+            Tags: 
+              - Key: Name
+                Value: A4L-Bastion-Host-C
+                
+    BastionSecurityGroupA:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+            GroupDescription: 'Enable SSH, TCP ports 80 and 443 for connecting to and fro app/db hosts'
+            SecurityGroupEgress:   
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for ssh'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for http'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80   
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for https'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443                   
+            SecurityGroupIngress:  
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Allowing ssh from public ip'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22 
+                - CidrIp: '10.16.0.0/20'
+                  Description: 'Allowing http from Reserved subnet A'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.0.0/20'
+                  Description: 'Allowing https from Reserved subnet A'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443  
+                - CidrIp: '10.16.16.0/20'
+                  Description: 'Allowing http from DB subnet A'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.16.0/20'
+                  Description: 'Allowing https from DB subnet A'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443  
+                - CidrIp: '10.16.32.0/20'
+                  Description: 'Allowing http from App subnet A'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.32.0/20'
+                  Description: 'Allowing https from App subnet A'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443                   
+            Tags: 
+                - Key: Name
+                  Value: A4L-Bastion-Security-Group-A
+            VpcId: !ImportValue a4l-vpc
+
+    BastionSecurityGroupB:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+            GroupDescription: 'Enable SSH, TCP ports 80 and 443 for connecting to and fro app/db hosts'
+            SecurityGroupEgress:   
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for ssh'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for http'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80   
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for https'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443                   
+            SecurityGroupIngress:  
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Allowing ssh from public ip'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22 
+                - CidrIp: '10.16.64.0/20'
+                  Description: 'Allowing http from Reserved subnet B'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.64.0/20'
+                  Description: 'Allowing https from Reserved subnet B'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443  
+                - CidrIp: '10.16.80.0/20'
+                  Description: 'Allowing http from DB subnet B'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.80.0/20'
+                  Description: 'Allowing https from DB subnet B'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443  
+                - CidrIp: '10.16.96.0/20'
+                  Description: 'Allowing http from App subnet B'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.96.0/20'
+                  Description: 'Allowing https from App subnet B'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443
+            Tags: 
+                - Key: Name
+                  Value: A4L-Bastion-Security-Group-B
+            VpcId: !ImportValue a4l-vpc
+
+    BastionSecurityGroupC:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+            GroupDescription: 'Enable SSH, TCP ports 80 and 443 for connecting to and fro app/db hosts'
+            SecurityGroupEgress:   
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for ssh'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for http'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80   
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Return port for https'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443                   
+            SecurityGroupIngress:  
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Allowing ssh from public ip'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22 
+                - CidrIp: '10.16.128.0/20'
+                  Description: 'Allowing http from Reserved subnet C'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.128.0/20'
+                  Description: 'Allowing https from Reserved subnet C'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443  
+                - CidrIp: '10.16.144.0/20'
+                  Description: 'Allowing http from DB subnet C'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.144.0/20'
+                  Description: 'Allowing https from DB subnet C'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443  
+                - CidrIp: '10.16.160.0/20'
+                  Description: 'Allowing http from App subnet C'
+                  FromPort: 80
+                  IpProtocol: tcp
+                  ToPort: 80  
+                - CidrIp: '10.16.160.0/20'
+                  Description: 'Allowing https from App subnet C'
+                  FromPort: 443
+                  IpProtocol: tcp
+                  ToPort: 443
+            Tags: 
+                - Key: Name
+                  Value: A4L-Bastion-Security-Group-C
+            VpcId: !ImportValue a4l-vpc
+
+
+    VpcRouteTableA:
+        Type: AWS::EC2::RouteTable
+        DependsOn: A4lBastionServerA
+        Properties: 
+            Tags: 
+                - Key: Name
+                  Value: a4l-vpc-private-rt-A
+            VpcId: !ImportValue a4l-vpc
+
+    AddRoutes2RouteTableA:
+        Type: AWS::EC2::Route
+        DependsOn: VpcRouteTableA
+        Properties: 
+            InstanceId: !Ref A4lBastionServerA
+            DestinationCidrBlock: 0.0.0.0/0
+            RouteTableId: !Ref VpcRouteTableA
+
+    SubnetRoute1TableAssocA:
+        DependsOn: VpcRouteTableA
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties: 
+            RouteTableId: !Ref VpcRouteTableA
+            SubnetId: !ImportValue a4l-vpc-subnet-appa
+
+    SubnetRoute2TableAssocA:
+      DependsOn: VpcRouteTableA
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTableA  
+          SubnetId: !ImportValue a4l-vpc-subnet-dba
+
+    SubnetRoute3TableAssocA:
+      DependsOn: VpcRouteTableA
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTableA  
+          SubnetId: !ImportValue a4l-vpc-subnet-reserveda       
+          
+    VpcRouteTableB:
+        Type: AWS::EC2::RouteTable
+        DependsOn: A4lBastionServerB
+        Properties: 
+            Tags: 
+                - Key: Name
+                  Value: a4l-vpc-private-rt-B
+            VpcId: !ImportValue a4l-vpc
+
+    AddRoutes2RouteTableB:
+        Type: AWS::EC2::Route
+        DependsOn: VpcRouteTableB
+        Properties: 
+            InstanceId: !Ref A4lBastionServerB
+            DestinationCidrBlock: 0.0.0.0/0
+            RouteTableId: !Ref VpcRouteTableB         
+            
+    SubnetRoute1TableAssocB:
+        DependsOn: VpcRouteTableB
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties: 
+            RouteTableId: !Ref VpcRouteTableB
+            SubnetId: !ImportValue a4l-vpc-subnet-appb
+
+    SubnetRoute2TableAssocB:
+      DependsOn: VpcRouteTableB
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTableB 
+          SubnetId: !ImportValue a4l-vpc-subnet-dbb
+
+    SubnetRoute3TableAssocB:
+      DependsOn: VpcRouteTableB
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTableB
+          SubnetId: !ImportValue a4l-vpc-subnet-reservedb
+
+    VpcRouteTableC:
+        Type: AWS::EC2::RouteTable
+        DependsOn: A4lBastionServerC
+        Properties: 
+            Tags: 
+                - Key: Name
+                  Value: a4l-vpc-private-rt-C
+            VpcId: !ImportValue a4l-vpc
+
+    AddRoutes2RouteTableC:
+        Type: AWS::EC2::Route
+        DependsOn: VpcRouteTableC
+        Properties: 
+            InstanceId: !Ref A4lBastionServerC
+            DestinationCidrBlock: 0.0.0.0/0
+            RouteTableId: !Ref VpcRouteTableC
+                    
+    SubnetRoute1TableAssocC:
+        DependsOn: VpcRouteTableC
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties: 
+            RouteTableId: !Ref VpcRouteTableC
+            SubnetId: !ImportValue a4l-vpc-subnet-appc
+
+    SubnetRoute2TableAssocC:
+      DependsOn: VpcRouteTableC
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTableC
+          SubnetId: !ImportValue a4l-vpc-subnet-dbc
+
+    SubnetRoute3TableAssocC:
+      DependsOn: VpcRouteTableC
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: 
+          RouteTableId: !Ref VpcRouteTableC
+          SubnetId: !ImportValue a4l-vpc-subnet-reservedc
+Outputs:
+    A4lBastionServerA:
+        Description: A reference to the created Bastion Host in subnet A
+        Value: !Ref A4lBastionServerA
+        Export:
+            Name: a4l-bastion-host-A      
+
+    A4lBastionServerB:
+        Description: A reference to the created Bastion Host in subnet B
+        Value: !Ref A4lBastionServerB
+        Export:
+            Name: a4l-bastion-host-B
+
+    A4lBastionServerC:
+        Description: A reference to the created Bastion Host in subnet C
+        Value: !Ref A4lBastionServerC
+        Export:
+            Name: a4l-bastion-host-C
+
+
+    A4LPublicSGA:
+        Description: A reference to the created security group in subnet A
+        Value: !Ref BastionSecurityGroupA
+        Export:
+            Name: a4l-public-sg-A
+
+    A4LPublicSGB:
+        Description: A reference to the created security group in subnet B
+        Value: !Ref BastionSecurityGroupB
+        Export:
+            Name: a4l-public-sg-B
+
+    A4LPublicSGC:
+        Description: A reference to the created security group in subnet C
+        Value: !Ref BastionSecurityGroupC
+        Export:
+            Name: a4l-public-sg-C            
