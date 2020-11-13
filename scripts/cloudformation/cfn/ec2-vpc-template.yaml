@@ -1,0 +1,232 @@
+AWSTemplateFormatVersion: "2010-09-09"
+    
+Description:
+    A template which creates an ec2 instance on a public subnet, on which a webapp will be installed.
+    Webapp is a based on python flask and postgres database.
+
+Parameters:
+    KeyName:
+        Type: AWS::EC2::KeyPair::KeyName
+        Description: "Name of an existing SSH Keypair to access the instance"
+        Default: a4lkeypair
+
+    InstanceAmiId:
+        Description: An ec2 instance AMI id
+        Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+        Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'        
+
+    InstanceType:
+        Type: String
+        Description: The instance type for the ec2 host
+        Default: "t2.micro"
+
+Resources:
+    Ec2Instance:
+        Type: AWS::EC2::Instance
+        CreationPolicy:
+            ResourceSignal:
+                Timeout: PT15M
+        Metadata:
+            AWS::CloudFormation::Init:
+                configSets:
+                    webapp_install:
+                        - install_cfn
+                        - software_install
+                        - configure_instance
+                        - install_flask_webapp
+                        - configure_postgres
+                        - configure_webapp
+
+                install_cfn:
+                    files:
+                        /etc/cfn/cfn-hup.conf:
+                            content: !Sub |
+                                [main]
+                                stack= ${AWS::StackId}
+                                region=${AWS::Region}
+                            group: root
+                            mode: '000400'
+                            owner: root
+                        /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+                            content: !Sub |
+                                [cfn-auto-reloader-hook]
+                                triggers=post.update
+                                path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init
+                                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource Ec2Instance --configsets webapp_install --region ${AWS::Region}
+                            group: root
+                            mode: '000400'
+                            owner: root
+                    services:
+                        sysvinit:
+                            cfn-hup:
+                                enabled: true
+                                ensureRunning: true
+                                files:
+                                - /etc/cfn/cfn-hup.conf
+                                - /etc/cfn/hooks.d/cfn-auto-reloader.conf                        
+
+                software_install:
+                    packages:
+                        yum:
+                            python3: []
+                            git: []
+                            postgresql: []
+                            postgresql-server: [] 
+                            postgresql-devel: []
+                            postgresql-contrib: []
+                            postgresql-docs: []
+                configure_instance:
+                    files:
+                        /tmp/bashrc:
+                            content: !Sub |
+                                export FLASK_APP=microblog.py
+                                export POSTGRES_USER=employee_usr
+                                export POSTGRES_PW=employee
+                                export POSTGRES_DB=employee_db
+                                export POSTGRES_URL=localhost:5432
+                            group: ec2-user
+                            mode: '000700'
+                            owner: ec2-user
+                    commands:
+                        01_init_bashrc:
+                            command: cat /tmp/bashrc >> /home/ec2-user/.bashrc
+                            cwd: "/home/ec2-user"
+
+                install_flask_webapp:
+                    commands:
+                        01_webapp_source_code_install:
+                            command: git clone https://github.com/paachary/flask-app.git
+                            cwd: "/home/ec2-user"
+                        02_install_virtual_env:
+                            command: pip3 install install virtualenv
+                            cwd: "/home/ec2-user/flask-app"
+                        03_configure_virtual_env:
+                            command: virtualenv myenv
+                            cwd: "/home/ec2-user/flask-app"
+                        04_activate_virtual_env:
+                            command: source myenv/bin/activate
+                            cwd: "/home/ec2-user/flask-app"
+                        05_install_webapp_components:
+                            command: pip3 install -r requirements.txt
+                            cwd: "/home/ec2-user/flask-app"
+
+                configure_postgres:
+                    files:
+                        /tmp/fix_pg_hba:
+                            content: !Sub |
+                                #!/bin/bash -xe
+                                sed -i "s/peer/trust/g" /var/lib/pgsql/data/pg_hba.conf
+                                sed -i "s/ident/md5/g" /var/lib/pgsql/data/pg_hba.conf
+                                echo "host all employee_usr 127.0.0.1/32 md5" >> /var/lib/pgsql/data/pg_hba.conf
+                            group: root
+                            mode: '000777'
+                            owner: postgres
+                        /tmp/create_user:
+                            content: !Sub |
+                                #!/bin/bash -xe
+                                sudo -u postgres psql << EOF
+                                CREATE USER employee_usr with password 'employee';
+                                CREATE DATABASE employee_db WITH OWNER employee_usr;
+                                EOF
+                            group: root
+                            mode: '000777'
+                            owner: postgres
+                    commands:
+                        01_init_postgres_db:
+                            command: postgresql-setup initdb
+                            cwd: /var/lib/pgsql/data
+                        02_change_pg_hba.conf:
+                            command: /tmp/fix_pg_hba
+                            cwd: /var/lib/pgsql/data
+                        03_start_postgres_db:
+                            command: service postgresql start
+                        04_configure_postgres_user:
+                            command: /tmp/create_user
+                            cwd: /var/lib/pgsql/data
+
+                configure_webapp:
+                    files:
+                        /tmp/setup_webapp_db:
+                            content: !Sub |
+                                #!/bin/bash -xe
+                                . myenv/bin/activate
+                                flask db init
+                                flask db migrate -m "installing the db code"
+                                flask db upgrade                                
+                            group: root
+                            mode: '000755'
+                            owner: ec2-user
+                        /tmp/launch_web_app:
+                            content: !Sub |
+                                #!/bin/bash -xe
+                                . myenv/bin/activate
+                                gunicorn -b :8000 --access-logfile - --error-logfile - microblog:app --daemon
+                                exit 0
+                            group: root
+                            mode: '000755'
+                            owner: ec2-user
+                    commands:
+                        01_execute_db_script:
+                            command: /tmp/setup_webapp_db
+                            env:
+                                POSTGRES_USER: employee_usr
+                                POSTGRES_PW: employee
+                                POSTGRES_DB: employee_db
+                                POSTGRES_URL: localhost:5432
+                            cwd: "/home/ec2-user/flask-app"
+                        02_execute_launch_script:
+                            command: /tmp/launch_web_app
+                            env:
+                                FLASK_APP: microblog.py
+                                POSTGRES_USER: employee_usr
+                                POSTGRES_PW: employee
+                                POSTGRES_DB: employee_db
+                                POSTGRES_URL: localhost:5432
+                            cwd: "/home/ec2-user/flask-app"
+        Properties:        
+            AvailabilityZone: !Select [0, !GetAZs '']
+            ImageId: !Ref InstanceAmiId
+            InstanceType: !Ref InstanceType
+            KeyName: !Ref KeyName
+            SecurityGroupIds: 
+                - !Ref EC2SecurityGroup
+            SubnetId: !ImportValue a4l-vpc-subnet-weba
+            Tags: 
+                - Key: Name
+                  Value: A4L-AppServer-Host
+            UserData:
+                Fn::Base64: !Sub |
+                    #!/bin/bash -xe
+                    yum update -y
+                    /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource Ec2Instance --configsets webapp_install --region ${AWS::Region}
+                    /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource Ec2Instance --region ${AWS::Region}
+
+    EC2SecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+            GroupDescription: 'Enable SSH, TCP ports 8000 for connecting the webapp server from external ip'
+            SecurityGroupIngress:  
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Allowing ssh from public domain'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22 
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Allowing http from public domain'
+                  FromPort: 8000
+                  IpProtocol: tcp
+                  ToPort: 8000
+            Tags: 
+                - Key: Name
+                  Value: A4L-Security-Group
+            VpcId: !ImportValue a4l-vpc
+
+Outputs: 
+    Ec2Instance:
+        Description: The public DNS name of the instance for accessing the website
+        Value: !Join
+            - ':'
+            - - !GetAtt
+               - Ec2Instance
+               - PublicDnsName
+              - '8000'
