@@ -298,64 +298,64 @@ Outputs:
         Description: A reference to the created VPC        
         Value: !Ref VPC
         Export:
-            Name: a4l-vpc
+            Name: vpc
     SubnetReservedA:
         Description: A reference to the created subnet                
         Value: !Ref SubnetReservedA 
         Export:
-            Name: a4l-vpc-subnet-reserveda
+            Name: vpc-subnet-reserveda
     SubnetReservedB:
         Description: A reference to the created subnet                
         Value: !Ref SubnetReservedB
         Export:
-            Name: a4l-vpc-subnet-reservedb
+            Name: vpc-subnet-reservedb
     SubnetReservedC:
         Description: A reference to the created subnet                
         Value: !Ref SubnetReservedC
         Export:
-            Name: a4l-vpc-subnet-reservedc
+            Name: vpc-subnet-reservedc
     SubnetAppA:
         Description: A reference to the created subnet                
         Value: !Ref SubnetAppA          
         Export:
-            Name: a4l-vpc-subnet-appa
+            Name: vpc-subnet-appa
     SubnetAppB:
         Description: A reference to the created subnet                
         Value: !Ref SubnetAppB                  
         Export:
-            Name: a4l-vpc-subnet-appb
+            Name: vpc-subnet-appb
     SubnetAppC:
         Description: A reference to the created subnet                
         Value: !Ref SubnetAppC      
         Export:
-            Name: a4l-vpc-subnet-appc         
+            Name: vpc-subnet-appc         
     SubnetDBA:
         Description: A reference to the created subnet                
         Value: !Ref SubnetDBA    
         Export:
-            Name: a4l-vpc-subnet-dba       
+            Name: vpc-subnet-dba       
     SubnetDBB:
         Description: A reference to the created subnet                
         Value: !Ref SubnetDBB   
         Export:
-            Name: a4l-vpc-subnet-dbb                
+            Name: vpc-subnet-dbb                
     SubnetDBC:
         Description: A reference to the created subnet                
         Value: !Ref SubnetDBC   
         Export:
-            Name: a4l-vpc-subnet-dbc
+            Name: vpc-subnet-dbc
     SubnetWebA:
         Description: A reference to the created subnet                
         Value: !Ref SubnetWebA      
         Export:
-            Name: a4l-vpc-subnet-weba                          
+            Name: vpc-subnet-weba                          
     SubnetWebB:
         Description: A reference to the created subnet                
         Value: !Ref SubnetWebB   
         Export:
-            Name: a4l-vpc-subnet-webb        
+            Name: vpc-subnet-webb        
     SubnetWebC:
         Description: A reference to the created subnet                
         Value: !Ref SubnetWebC       
         Export:
-            Name: a4l-vpc-subnet-webc    
+            Name: vpc-subnet-webc    

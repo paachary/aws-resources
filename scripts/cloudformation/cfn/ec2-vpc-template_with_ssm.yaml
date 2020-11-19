@@ -8,7 +8,7 @@ Parameters:
     KeyName:
         Type: AWS::EC2::KeyPair::KeyName
         Description: "Name of an existing SSH Keypair to access the instance"
-        Default: a4lkeypair
+        Default: keypair
 
     InstanceAmiId:
         Description: An ec2 instance AMI id
@@ -194,10 +194,10 @@ Resources:
             KeyName: !Ref KeyName
             SecurityGroupIds: 
                 - !Ref EC2SecurityGroup
-            SubnetId: !ImportValue a4l-vpc-subnet-weba
+            SubnetId: !ImportValue vpc-subnet-weba
             Tags: 
                 - Key: Name
-                  Value: A4L-AppServer-Host
+                  Value: AppServer-Host
             UserData:
                 Fn::Base64: !Sub |
                     #!/bin/bash -xe
@@ -222,8 +222,8 @@ Resources:
                   ToPort: 8000
             Tags: 
                 - Key: Name
-                  Value: A4L-Security-Group
-            VpcId: !ImportValue a4l-vpc
+                  Value: Security-Group
+            VpcId: !ImportValue vpc
 
 Outputs: 
     Ec2Instance:
