@@ -62,6 +62,7 @@ Parameters:
 Resources:
   NetworkStack:
     Type: AWS::CloudFormation::Stack
+    DependsOn: SSMParameterStack
     Properties:
 
       Parameters:
@@ -80,7 +81,6 @@ Resources:
 
   SSMParameterStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: NatGatewayStack
     Properties:
 
       Parameters:
@@ -118,7 +118,7 @@ Resources:
 
   PostgresDBInstanceStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: SSMParameterStack
+    DependsOn: NatGatewayStack
     Properties:
 
       Parameters:
