@@ -48,7 +48,7 @@ Resources:
     Metadata:
         AWS::CloudFormation::Init:
             configSets:
-                webapp_install:
+                db_install:
                     - install_cfn
                     - software_install
                     - configure_postgres
@@ -68,7 +68,7 @@ Resources:
                             [cfn-auto-reloader-hook]
                             triggers=post.update
                             path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init
-                            action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource Ec2DbInstance --configsets webapp_install --region ${AWS::Region}
+                            action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource Ec2DbInstance --configsets db_install --region ${AWS::Region}
                         group: root
                         mode: '000400'
                         owner: root
@@ -149,7 +149,7 @@ Resources:
           Fn::Base64: !Sub |
             #!/bin/bash -xe
             yum update -y
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource Ec2DbInstance --configsets webapp_install --region ${AWS::Region}
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource Ec2DbInstance --configsets db_install --region ${AWS::Region}
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource Ec2DbInstance --region ${AWS::Region}
 
   EC2SecurityGroup:
@@ -174,9 +174,12 @@ Resources:
 
 Outputs: 
     Ec2Instance:
-        Description: The private DNS name of the instance for accessing the postgres database
-        Value: !GetAtt
+        Description: The Host URL for accessing postgres DB server
+        Value: !Join
+            - ':'
+            - - !GetAtt
                - Ec2DbInstance
                - PrivateDnsName
+              - '5432'
         Export:
           Name: postgres-hostname

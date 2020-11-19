@@ -1,0 +1,165 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description:
+  A template for creating a publicly accessible webapp, which connects to a postgres db running on another 
+  instance in a private subnet.
+
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: "Name of an existing SSH Keypair to access the instance"
+    Default: keypair
+    MinLength: 1
+
+  InstanceAmiId:
+    Description: An ec2 instance AMI id
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+Resources:
+
+  InstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref InstanceRole
+
+  Ec2WebappInstance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+        ResourceSignal:
+            Timeout: PT15M
+    Metadata:
+        AWS::CloudFormation::Init:
+            configSets:
+                webapp_install:
+                  - install_cfn
+                  - software_install
+                  - configure_webapp
+
+            install_cfn:
+              files:
+                  /etc/cfn/cfn-hup.conf:
+                      content: !Sub |
+                          [main]
+                          stack= ${AWS::StackId}
+                          region=${AWS::Region}
+                      group: root
+                      mode: '000400'
+                      owner: root
+                  /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+                      content: !Sub |
+                          [cfn-auto-reloader-hook]
+                          triggers=post.update
+                          path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init
+                          action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource Ec2DbInstance --configsets webapp_install --region ${AWS::Region}
+                      group: root
+                      mode: '000400'
+                      owner: root
+              services:
+                  sysvinit:
+                      cfn-hup:
+                          enabled: true
+                          ensureRunning: true
+                          files:
+                          - /etc/cfn/cfn-hup.conf
+                          - /etc/cfn/hooks.d/cfn-auto-reloader.conf                        
+
+            software_install:
+              packages:
+                  yum:
+                      python3: []
+                      git: []
+
+            configure_webapp:
+              files:
+                /tmp/setup_webapp_db:
+                    content: !Sub |
+                        #!/bin/bash -xe
+                        . myenv/bin/activate
+                        export POSTGRES_USER=$(aws ssm get-parameters --region ${AWS::Region} --names PostgresUser --query Parameters[0].Value | tr -d '"')
+                        export POSTGRES_PW=employee
+                        export POSTGRES_DB=$(aws ssm get-parameters --region ${AWS::Region} --names PostgresDb --query Parameters[0].Value | tr -d '"')
+                        export POSTGRES_URL=!ImportValue postgres-hostname
+                        export FLASK_APP=$(aws ssm get-parameters --region ${AWS::Region} --names FlaskApp --query Parameters[0].Value | tr -d '"')
+
+                        flask db init
+                        flask db migrate -m "installing the db code"
+                        flask db upgrade
+                        gunicorn -b :8000 --access-logfile - --error-logfile - microblog:app --daemon
+                        exit 0
+                    group: root
+                    mode: '000755'
+                    owner: ec2-user
+              commands:
+                01_execute_db_script:
+                    command: /tmp/setup_webapp_db
+                    cwd: "/home/ec2-user/flask-app"
+
+    Properties: 
+      AvailabilityZone: !Select [0, !GetAZs '']
+      ImageId: !Ref InstanceAmiId
+      InstanceType: "{{resolve:ssm:Ec2InstanceType:1}}"
+      IamInstanceProfile: !Ref InstanceProfile
+      KeyName: !Ref KeyName
+      SecurityGroupIds: 
+          - !Ref EC2SecurityGroup
+      SubnetId: !ImportValue vpc-subnet-dba
+      Tags: 
+          - Key: Name
+            Value: Postgres-DB-Server
+      UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            yum update -y
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource Ec2DbInstance --configsets webapp_install --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource Ec2DbInstance --region ${AWS::Region}
+
+  EC2SecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties: 
+            GroupDescription: 'Enable SSH TCP port 5432 for connecting to the postgres db server running in the private subnet'
+            SecurityGroupIngress:
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Allowing ssh from public domain'
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22 
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Allowing connection to postgres port from public domain'
+                  FromPort: 5432
+                  IpProtocol: tcp
+                  ToPort: 5432
+            Tags: 
+                - Key: Name
+                  Value: Ec2-Postgres-Security-Group
+            VpcId: !ImportValue vpc
+
+Outputs: 
+    Ec2Instance:
+        Description: The Host URL for accessing postgres DB server
+        Value: !Join
+            - ':'
+            - - !GetAtt
+               - Ec2DbInstance
+               - PrivateDnsName
+              - '5432'
+        Export:
+          Name: postgres-hostname
