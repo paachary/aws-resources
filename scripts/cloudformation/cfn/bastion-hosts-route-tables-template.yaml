@@ -24,14 +24,14 @@ Parameters:
 Resources:
     A4lBastionServerA:
         Type: AWS::EC2::Instance
-        DependsOn: BastionSecurityGroupA
+        DependsOn: BastionSecurityGroup
         Properties:
             AvailabilityZone: !Select [0, !GetAZs '']
             ImageId: !Ref NatInstanceAmiId
             InstanceType: !Ref InstanceType
             KeyName: !Ref KeyName
             SecurityGroupIds: 
-              - !Ref BastionSecurityGroupA
+              - !Ref BastionSecurityGroup
             SourceDestCheck: false
             SubnetId: !ImportValue a4l-vpc-subnet-weba
             Tags: 
@@ -40,14 +40,14 @@ Resources:
 
     A4lBastionServerB:
         Type: AWS::EC2::Instance
-        DependsOn: BastionSecurityGroupB
+        DependsOn: BastionSecurityGroup
         Properties:
             AvailabilityZone: !Select [1, !GetAZs '']
             ImageId: !Ref NatInstanceAmiId
             InstanceType: !Ref InstanceType
             KeyName: !Ref KeyName
             SecurityGroupIds: 
-              - !Ref BastionSecurityGroupB
+              - !Ref BastionSecurityGroup
             SourceDestCheck: false
             SubnetId: !ImportValue a4l-vpc-subnet-webb
             Tags: 
@@ -56,21 +56,21 @@ Resources:
        
     A4lBastionServerC:
         Type: AWS::EC2::Instance
-        DependsOn: BastionSecurityGroupC
+        DependsOn: BastionSecurityGroup
         Properties:
             AvailabilityZone: !Select [2, !GetAZs '']
             ImageId: !Ref NatInstanceAmiId
             InstanceType: !Ref InstanceType
             KeyName: !Ref KeyName
             SecurityGroupIds: 
-              - !Ref BastionSecurityGroupC
+              - !Ref BastionSecurityGroup
             SourceDestCheck: false
             SubnetId: !ImportValue a4l-vpc-subnet-webc
             Tags: 
               - Key: Name
                 Value: A4L-Bastion-Host-C
                 
-    BastionSecurityGroupA:
+    BastionSecurityGroup:
         Type: AWS::EC2::SecurityGroup
         Properties: 
             GroupDescription: 'Enable SSH, TCP ports 80 and 443 for connecting to and fro app/db hosts'
@@ -92,168 +92,24 @@ Resources:
                   ToPort: 443                   
             SecurityGroupIngress:  
                 - CidrIp: '0.0.0.0/0'
-                  Description: 'Allowing ssh from public ip'
+                  Description: 'Allowing ssh from external ip'
                   FromPort: 22
                   IpProtocol: tcp
                   ToPort: 22 
-                - CidrIp: '10.16.0.0/20'
-                  Description: 'Allowing http from Reserved subnet A'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80  
-                - CidrIp: '10.16.0.0/20'
-                  Description: 'Allowing https from Reserved subnet A'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443  
-                - CidrIp: '10.16.16.0/20'
-                  Description: 'Allowing http from DB subnet A'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80  
-                - CidrIp: '10.16.16.0/20'
-                  Description: 'Allowing https from DB subnet A'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443  
-                - CidrIp: '10.16.32.0/20'
-                  Description: 'Allowing http from App subnet A'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80  
-                - CidrIp: '10.16.32.0/20'
-                  Description: 'Allowing https from App subnet A'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443                   
-            Tags: 
-                - Key: Name
-                  Value: A4L-Bastion-Security-Group-A
-            VpcId: !ImportValue a4l-vpc
-
-    BastionSecurityGroupB:
-        Type: AWS::EC2::SecurityGroup
-        Properties: 
-            GroupDescription: 'Enable SSH, TCP ports 80 and 443 for connecting to and fro app/db hosts'
-            SecurityGroupEgress:   
                 - CidrIp: '0.0.0.0/0'
-                  Description: 'Return port for ssh'
-                  FromPort: 22
-                  IpProtocol: tcp
-                  ToPort: 22
-                - CidrIp: '0.0.0.0/0'
-                  Description: 'Return port for http'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80   
-                - CidrIp: '0.0.0.0/0'
-                  Description: 'Return port for https'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443                   
-            SecurityGroupIngress:  
-                - CidrIp: '0.0.0.0/0'
-                  Description: 'Allowing ssh from public ip'
-                  FromPort: 22
-                  IpProtocol: tcp
-                  ToPort: 22 
-                - CidrIp: '10.16.64.0/20'
-                  Description: 'Allowing http from Reserved subnet B'
+                  Description: 'Allowing http from external ip'
                   FromPort: 80
                   IpProtocol: tcp
                   ToPort: 80  
-                - CidrIp: '10.16.64.0/20'
-                  Description: 'Allowing https from Reserved subnet B'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443  
-                - CidrIp: '10.16.80.0/20'
-                  Description: 'Allowing http from DB subnet B'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80  
-                - CidrIp: '10.16.80.0/20'
-                  Description: 'Allowing https from DB subnet B'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443  
-                - CidrIp: '10.16.96.0/20'
-                  Description: 'Allowing http from App subnet B'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80  
-                - CidrIp: '10.16.96.0/20'
-                  Description: 'Allowing https from App subnet B'
+                - CidrIp: '0.0.0.0/0'
+                  Description: 'Allowing http from external ip'
                   FromPort: 443
                   IpProtocol: tcp
                   ToPort: 443
             Tags: 
                 - Key: Name
-                  Value: A4L-Bastion-Security-Group-B
+                  Value: A4L-Bastion-Security-Group
             VpcId: !ImportValue a4l-vpc
-
-    BastionSecurityGroupC:
-        Type: AWS::EC2::SecurityGroup
-        Properties: 
-            GroupDescription: 'Enable SSH, TCP ports 80 and 443 for connecting to and fro app/db hosts'
-            SecurityGroupEgress:   
-                - CidrIp: '0.0.0.0/0'
-                  Description: 'Return port for ssh'
-                  FromPort: 22
-                  IpProtocol: tcp
-                  ToPort: 22
-                - CidrIp: '0.0.0.0/0'
-                  Description: 'Return port for http'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80   
-                - CidrIp: '0.0.0.0/0'
-                  Description: 'Return port for https'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443                   
-            SecurityGroupIngress:  
-                - CidrIp: '0.0.0.0/0'
-                  Description: 'Allowing ssh from public ip'
-                  FromPort: 22
-                  IpProtocol: tcp
-                  ToPort: 22 
-                - CidrIp: '10.16.128.0/20'
-                  Description: 'Allowing http from Reserved subnet C'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80  
-                - CidrIp: '10.16.128.0/20'
-                  Description: 'Allowing https from Reserved subnet C'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443  
-                - CidrIp: '10.16.144.0/20'
-                  Description: 'Allowing http from DB subnet C'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80  
-                - CidrIp: '10.16.144.0/20'
-                  Description: 'Allowing https from DB subnet C'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443  
-                - CidrIp: '10.16.160.0/20'
-                  Description: 'Allowing http from App subnet C'
-                  FromPort: 80
-                  IpProtocol: tcp
-                  ToPort: 80  
-                - CidrIp: '10.16.160.0/20'
-                  Description: 'Allowing https from App subnet C'
-                  FromPort: 443
-                  IpProtocol: tcp
-                  ToPort: 443
-            Tags: 
-                - Key: Name
-                  Value: A4L-Bastion-Security-Group-C
-            VpcId: !ImportValue a4l-vpc
-
-
     VpcRouteTableA:
         Type: AWS::EC2::RouteTable
         DependsOn: A4lBastionServerA
@@ -387,20 +243,8 @@ Outputs:
             Name: a4l-bastion-host-C
 
 
-    A4LPublicSGA:
+    A4LPublicSG:
         Description: A reference to the created security group in subnet A
-        Value: !Ref BastionSecurityGroupA
+        Value: !Ref BastionSecurityGroup
         Export:
-            Name: a4l-public-sg-A
-
-    A4LPublicSGB:
-        Description: A reference to the created security group in subnet B
-        Value: !Ref BastionSecurityGroupB
-        Export:
-            Name: a4l-public-sg-B
-
-    A4LPublicSGC:
-        Description: A reference to the created security group in subnet C
-        Value: !Ref BastionSecurityGroupC
-        Export:
-            Name: a4l-public-sg-C            
+            Name: a4l-public-sg
