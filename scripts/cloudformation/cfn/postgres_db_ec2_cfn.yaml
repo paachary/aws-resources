@@ -99,8 +99,8 @@ Resources:
                           #!/bin/bash -xe
                           sed -i "s/peer/trust/g" /var/lib/pgsql/data/pg_hba.conf
                           sed -i "s/ident/md5/g" /var/lib/pgsql/data/pg_hba.conf
-                          sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /var/lib/pgsql9/data/postgresql.conf
-                          sed -i "s/#port = 5432/port = 5432/g" /var/lib/pgsql9/data/postgresql.conf
+                          sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /var/lib/pgsql/data/postgresql.conf
+                          sed -i "s/#port = 5432/port = 5432/g" /var/lib/pgsql/data/postgresql.conf
                           DBUser=$(aws ssm get-parameters --region ${AWS::Region} --names PostgresUser --query Parameters[0].Value | tr -d '"')
                           echo "host all $DBUser 0.0.0.0/0 md5" >> /var/lib/pgsql/data/pg_hba.conf
                         group: root
